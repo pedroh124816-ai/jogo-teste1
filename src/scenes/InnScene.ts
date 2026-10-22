@@ -18,7 +18,8 @@ export class InnScene implements Scene {
   private cost: number;
 
   private phase: InnPhase = 'prompt';
-  private selectedIndex = 0; // 0 = SIM, 1 = NÃO
+  private selectedIndex = 0; // 0 = MANHÃ, 1 = NOITE, 2 = NÃO
+  private chosenTime: 'day' | 'night' = 'day';
   private sleepTimer = 0;
   private readonly sleepDuration = 60;
   private resultMessage = '';
@@ -43,35 +44,41 @@ export class InnScene implements Scene {
     if (this.phase === 'resting') {
       this.sleepTimer++;
       if (this.sleepTimer >= this.sleepDuration) {
+        gameState.setTimeOfDay(this.chosenTime);
         const res = gameState.restAtInn(this.cost);
         if (res.success) {
+          const timeMsg =
+            this.chosenTime === 'day'
+              ? 'Você acordou com o sol da manhã!\nPV e PM restaurados!'
+              : 'Você acordou sob o luar da noite!\nPV e PM restaurados!';
+
           if (gameState.getFlag('ato4_concluido') && !gameState.getFlag('sonho_5_visto')) {
             gameState.setFlag('sonho_5_visto', true);
             this.resultMessage = gameState.interpolateText(
-              "Sonho: 'O Templo-Coração\nespera por você na ilha.'\nPV e PM restaurados!"
+              "Sonho: 'O Templo-Coração\nespera por você na ilha.'\n" + timeMsg
             );
           } else if (gameState.getFlag('refugio_aberto') && !gameState.getFlag('sonho_4_visto')) {
             gameState.setFlag('sonho_4_visto', true);
             this.resultMessage = gameState.interpolateText(
-              "Sonho: Aneth põe o Medalhão\nem seu peito: 'Viva, filho.'\nPV e PM restaurados!"
+              "Sonho: Aneth põe o Medalhão\nem seu peito: 'Viva, filho.'\n" + timeMsg
             );
           } else if (gameState.getFlag('ato2_concluido') && !gameState.getFlag('sonho_3_visto')) {
             gameState.setFlag('sonho_3_visto', true);
             this.resultMessage = gameState.interpolateText(
-              "Sonho: 'Ulan, feche a porta\ndo Templo! Eles vêm aí!'\nPV e PM restaurados!"
+              "Sonho: 'Ulan, feche a porta\ndo Templo! Eles vêm aí!'\n" + timeMsg
             );
           } else if (gameState.getFlag('ato1_concluido') && !gameState.getFlag('sonho_2_visto')) {
             gameState.setFlag('sonho_2_visto', true);
             this.resultMessage = gameState.interpolateText(
-              "Sonho: Uma mulher corre na\nfloresta com um bebê...\nPV e PM restaurados!"
+              "Sonho: Uma mulher corre na\nfloresta com um bebê...\n" + timeMsg
             );
           } else if (!gameState.getFlag('sonho_1_visto')) {
             gameState.setFlag('sonho_1_visto', true);
             this.resultMessage = gameState.interpolateText(
-              "Sonho: 'Não tema o escuro,\n[NOME]... guarde o Lume.'\nPV e PM restaurados!"
+              "Sonho: 'Não tema o escuro,\n[NOME]... guarde o Lume.'\n" + timeMsg
             );
           } else {
-            this.resultMessage = res.message;
+            this.resultMessage = timeMsg;
           }
           gameState.saveGame();
         } else {
@@ -90,20 +97,25 @@ export class InnScene implements Scene {
       return;
     }
 
-    // Fase prompt (SIM / NÃO)
-    if (this.input.wasPressed('up') || this.input.wasPressed('down')) {
-      this.selectedIndex = (this.selectedIndex + 1) % 2;
+    // Fase prompt (MANHÃ / NOITE / NÃO)
+    const optionsCount = 3;
+    if (this.input.wasPressed('up')) {
+      this.selectedIndex = (this.selectedIndex - 1 + optionsCount) % optionsCount;
+      soundManager.playSfx('cursor');
+    } else if (this.input.wasPressed('down')) {
+      this.selectedIndex = (this.selectedIndex + 1) % optionsCount;
       soundManager.playSfx('cursor');
     } else if (this.input.wasPressed('cancel')) {
       soundManager.playSfx('cancel');
       this.sceneManager.pop();
     } else if (this.input.wasPressed('confirm')) {
-      if (this.selectedIndex === 0) {
+      if (this.selectedIndex === 0 || this.selectedIndex === 1) {
         if (gameState.gold < this.cost) {
           soundManager.playSfx('error');
           this.resultMessage = 'Sinto muito, viajante.\nVocê não tem moedas\nsuficientes para o quarto.';
           this.phase = 'result';
         } else {
+          this.chosenTime = this.selectedIndex === 0 ? 'day' : 'night';
           soundManager.playSfx('inn');
           this.sleepTimer = 0;
           this.phase = 'resting';
@@ -123,11 +135,11 @@ export class InnScene implements Scene {
     renderer.drawText(`OURO: ${gameState.gold} O`, 148, 42, { color: NES_COLORS.GOLD });
 
     if (this.phase === 'prompt') {
-      // Janela SIM / NÃO
-      renderer.drawWindow(8, 84, 88, 50, NES_COLORS.BLACK);
-      const opts = ['SIM', 'NÃO'];
+      // Janela MANHÃ / NOITE / NÃO
+      renderer.drawWindow(8, 72, 96, 64, NES_COLORS.BLACK);
+      const opts = ['MANHÃ', 'NOITE', 'NÃO'];
       for (let i = 0; i < opts.length; i++) {
-        const y = 96 + i * 16;
+        const y = 82 + i * 16;
         if (i === this.selectedIndex) {
           renderer.drawText('►', 18, y, { color: NES_COLORS.WHITE });
         }
@@ -141,7 +153,7 @@ export class InnScene implements Scene {
       renderer.drawText('HOSPEDEIRO', 18, 150, { color: NES_COLORS.GOLD });
       renderer.fillRect(16, 160, 224, 1, NES_COLORS.WHITE);
       renderer.drawText(
-        `Bem-vindo à Estalagem!\nO pernoite custa ${this.cost} moedas.\nDeseja descansar aqui?`,
+        `Bem-vindo à Estalagem!\nO pernoite custa ${this.cost} moedas.\nAté quando deseja dormir?`,
         18,
         166,
         { color: NES_COLORS.WHITE, lineHeight: 12 }

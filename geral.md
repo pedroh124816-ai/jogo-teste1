@@ -142,6 +142,11 @@ jogo/
     - Criação da cena de créditos em 8-bit (`CreditsScene.ts`) com rolagem suave, estética NES e tema solene de encerramento.
     - Tela final fixa de "FIM / A COROA VAZIA" com retorno automático para a Tela de Título (`TitleScene.ts`).
     - Salva o jogo com a flag `jogo_concluido` e exibe o símbolo dourado de conclusão `★` no menu `CONTINUAR`.
+11. **Ciclo Dia/Noite & Missões Noturnas** — ✅ **Concluída**
+    - Iluminação noturna 8-bit com filtro de luar (*Night Tint* azul-marinho `rgba(10, 16, 44, 0.52)` em `Renderer.ts`) preservando janelas, caixas de diálogo e HUDs.
+    - Escolha de repouso na Estalagem (`InnScene.ts`): "MANHÃ", "NOITE" ou "NÃO", permitindo alternar livremente o período do dia.
+    - Missão noturna do Ato 2 ("A Carga Perdida"): caixotes vigiados de dia por guardas, acessíveis apenas à noite nas docas de Porto do Sol.
+    - Invasão noturna do Ato 3 em Cobre-Alto sob o céu escuro da noite e aumento de encontros noturnos no overworld (+25%).
 
 ---
 
@@ -164,6 +169,7 @@ jogo/
 - [x] Cutscene de abertura em 8-bit (`IntroScene.ts`), início guiado no Salão do Trono do Rei Auren, sistema de Save/Load (`localStorage`) e progressão geográfica guiada por montanhas cinzas e rios (Etapa 8).
 - [x] Sintetizador de áudio 8-bit chiptune (`AudioManager.ts`) com 8 trilhas musicais estilo Square Enix NES e 17 efeitos sonoros/fanfarras (Etapa 9).
 - [x] Encerramento formal, CreditsScene com rolagem e retorno ao título com estrela dourada `★` de jogo concluído (Etapa 10).
+- [x] Ciclo Dia/Noite com filtro de luar, descanso estalagem (manhã/noite), missão noturna no Porto do Sol e invasão noturna em Cobre-Alto (Etapa 11).
 
 
 

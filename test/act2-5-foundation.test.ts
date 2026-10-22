@@ -438,5 +438,28 @@ describe('Etapa 10 - Encerramento Formal, CreditsScene e Marcador de Jogo Conclu
   });
 });
 
+describe('Etapa 11 - Sistema de Ciclo Dia / Noite & Missoes Noturnas', () => {
+  it('alterna corretamente entre dia e noite, persistindo no save/load', () => {
+    gameState.reset();
+    expect(gameState.isNight()).toBe(false);
+    expect(gameState.timeOfDay).toBe('day');
+
+    gameState.setTimeOfDay('night');
+    expect(gameState.isNight()).toBe(true);
+    expect(gameState.timeOfDay).toBe('night');
+
+    gameState.saveGame();
+    gameState.reset();
+    expect(gameState.isNight()).toBe(false);
+
+    gameState.loadGame();
+    expect(gameState.isNight()).toBe(true);
+    expect(gameState.timeOfDay).toBe('night');
+
+    gameState.setTimeOfDay('day');
+    expect(gameState.isNight()).toBe(false);
+  });
+});
+
 
 

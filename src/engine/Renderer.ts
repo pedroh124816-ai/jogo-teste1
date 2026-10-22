@@ -165,6 +165,17 @@ export class Renderer {
   }
 
   /**
+   * Filtro de iluminação noturna estilo NES (azul-marinho escuro e profundo).
+   * intensity: opacidade da noite (padrão 0.52).
+   */
+  public drawNightTint(intensity = 0.52): void {
+    if (intensity <= 0) return;
+    const alpha = Math.min(0.75, Math.max(0.1, intensity));
+    this.ctx.fillStyle = `rgba(10, 16, 44, ${alpha})`;
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+
+  /**
    * Desenha retângulo colorido preenchido.
    */
   public fillRect(x: number, y: number, w: number, h: number, color: string): void {

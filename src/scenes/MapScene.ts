@@ -208,6 +208,13 @@ export class MapScene implements Scene {
     // Centraliza a câmera no herói
     this.camera.follow(this.player.pixelX, this.player.pixelY);
 
+    // Controle de iluminação narrativa (Dia / Noite por evento)
+    if (mapId === 'cobre_alto' && !gameState.getFlag('ato3_concluido')) {
+      gameState.setTimeOfDay('night');
+    } else if (mapId === 'overworld' && destWarpName === 'cobre_alto' && gameState.getFlag('ponte_destruida')) {
+      gameState.setTimeOfDay('day');
+    }
+
     // Banner de localização
     this.locationBannerTitle = this.currentMap.title;
     this.locationBannerTimer = 180;
@@ -285,6 +292,27 @@ export class MapScene implements Scene {
         );
       });
       return;
+    }
+
+    // 1.05 Investigação Noturna no Porto do Sol (Ato 2)
+    if (npc.name === 'Mestre Tavo' && this.currentMapId === 'cidade_2') {
+      gameState.setFlag('tavo_investigando', true);
+      if (!gameState.isNight() && !gameState.getFlag('garo_carga_vista')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Bom ver você, [NOME]!\nGaro esconde os caixotes\nde dia com guardas reais.\n---\nVá até a Estalagem e\nespere a NOITE para invadir\no cais sem ser visto!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      if (gameState.isNight() && !gameState.getFlag('garo_carga_vista')) {
+        this.dialogueBox.start(
+          npc.name,
+          'A noite caiu no porto!\nOs guardas se recolheram.\nVá agora investigar o cais\nao sul sem ser visto!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
     }
 
     // 1.1 Duelo do Ato 2: Almirante Brasca na Gruta da Costa
@@ -1060,11 +1088,18 @@ export class MapScene implements Scene {
     // 2. Tenta ler placa de frente
     const sign = this.currentMap.getSignAt(facing.x, facing.y);
     if (sign) {
+      if (sign.setFlag === 'garo_carga_vista') {
+        if (!gameState.isNight() && !gameState.getFlag('garo_carga_vista')) {
+          this.dialogueBox.start(
+            sign.title || 'CAIXOTE DO CAIS',
+            'Guardas reais vigiam os\ncaixotes sob o sol a pino.\nImpossível abrir sem alarde!\n---\nDescanse na Estalagem e\nespere a NOITE para invadir\no cais sem ser visto!'
+          );
+          return true;
+        }
+        gameState.setFlag('carga_perdida_resolvida', true);
+      }
       if (sign.setFlag) {
         gameState.setFlag(sign.setFlag, true);
-      }
-      if (sign.setFlag === 'garo_carga_vista') {
-        gameState.setFlag('carga_perdida_resolvida', true);
       }
       if (sign.setFlag === 'diario_auren_lido' && gameState.getItemQuantity('diario_auren') === 0) {
         gameState.addItem('diario_auren', 1);
@@ -1408,7 +1443,8 @@ export class MapScene implements Scene {
       // 7.1 Checa encontro aleatório de batalha apenas em mapas perigosos (overworld, cavernas)
       if (!this.currentMap.isSafe) {
         if (currentTile && currentTile.encounterRate > 0) {
-          if (Math.random() < currentTile.encounterRate) {
+          const rateMultiplier = gameState.isNight() ? 1.25 : 1.0;
+          if (Math.random() < currentTile.encounterRate * rateMultiplier) {
             const monster = rollEncounterForTerrain(
               currentTile.id,
               this.currentMapId === 'overworld' ? this.player.tileX : undefined,
@@ -1452,17 +1488,27 @@ export class MapScene implements Scene {
     // 4. Renderiza o herói
     this.player.render(renderer, this.camera, this.assetManager);
 
+    // 4.1 Filtro de luar noturno estilo 8-bit (aplica-se a mapas exteriores e cidades durante a noite)
+    if (gameState.isNight() && this.currentMap.mapType !== 'caverna') {
+      const tint = this.currentMap.mapType === 'interior' ? 0.28 : 0.52;
+      renderer.drawNightTint(tint);
+    }
+
     // 5. Banner de localização (exibido na entrada de cada mapa)
     if (this.locationBannerTimer > 0) {
-      const bannerW = 160;
+      let displayTitle = this.locationBannerTitle;
+      if (gameState.isNight() && this.currentMap.mapType !== 'caverna') {
+        displayTitle += ' (NOITE)';
+      }
+      const bannerW = Math.max(160, renderer.measureText(displayTitle) + 24);
       const bannerH = 24;
       const bannerX = Math.floor((CONFIG.screen.width - bannerW) / 2);
       const bannerY = 8;
 
       renderer.drawWindow(bannerX, bannerY, bannerW, bannerH, NES_COLORS.BLACK);
-      const textW = renderer.measureText(this.locationBannerTitle);
+      const textW = renderer.measureText(displayTitle);
       const textX = bannerX + Math.floor((bannerW - textW) / 2);
-      renderer.drawText(this.locationBannerTitle, textX, bannerY + 8, {
+      renderer.drawText(displayTitle, textX, bannerY + 8, {
         color: NES_COLORS.GOLD,
       });
     }

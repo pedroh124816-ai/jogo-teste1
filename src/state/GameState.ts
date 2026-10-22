@@ -90,6 +90,7 @@ export class GameState {
   public savedTileX = 18;
   public savedTileY = 6;
   public savedDir: 'up' | 'down' | 'left' | 'right' = 'up';
+  public timeOfDay: 'day' | 'night' = 'day';
 
   private static readonly SAVE_KEY = 'lenda_luminario_save_v1';
   private static memorySaveFallback: string | null = null;
@@ -134,6 +135,15 @@ export class GameState {
     this.savedTileX = 18;
     this.savedTileY = 6;
     this.savedDir = 'up';
+    this.timeOfDay = 'day';
+  }
+
+  public isNight(): boolean {
+    return this.timeOfDay === 'night';
+  }
+
+  public setTimeOfDay(time: 'day' | 'night'): void {
+    this.timeOfDay = time;
   }
 
   public setHeroName(rawName: string): void {
@@ -467,6 +477,7 @@ export class GameState {
       savedTileX: this.savedTileX,
       savedTileY: this.savedTileY,
       savedDir: this.savedDir,
+      timeOfDay: this.timeOfDay,
     };
 
     const serialized = JSON.stringify(payload);
@@ -573,6 +584,9 @@ export class GameState {
         data.savedDir === 'right'
       ) {
         this.savedDir = data.savedDir;
+      }
+      if (data.timeOfDay === 'day' || data.timeOfDay === 'night') {
+        this.timeOfDay = data.timeOfDay;
       }
       return true;
     } catch {
