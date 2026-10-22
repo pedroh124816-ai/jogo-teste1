@@ -1,0 +1,251 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 12,
+  "height": 10,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "properties": [
+    {
+      "name": "id",
+      "type": "string",
+      "value": "cidade_1_loja"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "value": "LOJA DE PROVISÕES"
+    },
+    {
+      "name": "mapType",
+      "type": "string",
+      "value": "interior"
+    },
+    {
+      "name": "music",
+      "type": "string",
+      "value": "town"
+    },
+    {
+      "name": "boundaryTile",
+      "type": "string",
+      "value": "black_void"
+    },
+    {
+      "name": "exitOnEdge",
+      "type": "bool",
+      "value": false
+    },
+    {
+      "name": "edgeExit",
+      "type": "string",
+      "value": ""
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "luminario_tileset",
+      "tilewidth": 16,
+      "tileheight": 16
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "terreno",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 10,
+      "data": [
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        10,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13
+      ]
+    },
+    {
+      "id": 2,
+      "name": "objetos",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "saida",
+          "type": "warp",
+          "x": 80,
+          "y": 144,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "target",
+              "type": "string",
+              "value": "cidade_1:porta_loja"
+            },
+            {
+              "name": "arriveDir",
+              "type": "string",
+              "value": "down"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "Comerciante",
+          "type": "npc",
+          "x": 80,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_merchant"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Armaduras de couro e ervas curativas!\nEm breve teremos mais mercadorias."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

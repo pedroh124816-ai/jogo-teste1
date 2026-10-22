@@ -1,0 +1,293 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at center, #10142a 0%, #05060d 70%, #000 100%);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game {
+  display: block;
+  /* Sem suavização: cada pixel interno vira um bloco nítido. */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #000;
+  box-shadow:
+    0 0 0 2px #1b1f3a,
+    0 0 48px 8px rgba(60, 188, 252, 0.12);
+  animation: boot 600ms steps(6) both;
+}
+
+@keyframes boot {
+  from {
+    opacity: 0;
+    filter: brightness(2.5);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.boot-error {
+  color: #fcfcfc;
+  font: 14px/1.5 monospace;
+  max-width: 640px;
+  padding: 24px;
+  white-space: pre-wrap;
+}
+
+/* ========================================================
+   Barra de Ferramentas Superior (Alternar Touch / Tela Cheia)
+   ======================================================== */
+.touch-top-bar {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 9999;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.top-util-btn {
+  background: rgba(16, 20, 42, 0.7);
+  border: 1px solid rgba(124, 124, 124, 0.4);
+  color: #fcfcfc;
+  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: transform 0.1s ease, background 0.15s ease;
+  touch-action: manipulation;
+}
+
+.top-util-btn:active {
+  transform: scale(0.92);
+  background: rgba(32, 56, 236, 0.6);
+}
+
+/* ========================================================
+   Gamepad Virtual Touch (Mobile & Tablet)
+   ======================================================== */
+.touch-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: 220px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 12px 20px 24px;
+  pointer-events: none;
+  z-index: 9990;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  box-sizing: border-box;
+}
+
+/* D-Pad Direcional em Cruz */
+.dpad-wrapper {
+  pointer-events: auto;
+  width: 140px;
+  height: 140px;
+  position: relative;
+  touch-action: none;
+}
+
+.dpad-cross {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.dpad-button {
+  position: absolute;
+  background: rgba(28, 30, 44, 0.82);
+  border: 2px solid rgba(124, 124, 124, 0.5);
+  color: #fcfcfc;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: pointer;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+  transition: background 0.05s ease, border-color 0.05s ease;
+}
+
+.dpad-button.pressed {
+  background: rgba(60, 188, 252, 0.5) !important;
+  border-color: #74dcff !important;
+  color: #ffffff;
+}
+
+.dpad-up {
+  top: 0;
+  left: 46px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px 8px 0 0;
+}
+
+.dpad-down {
+  bottom: 0;
+  left: 46px;
+  width: 48px;
+  height: 48px;
+  border-radius: 0 0 8px 8px;
+}
+
+.dpad-left {
+  top: 46px;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px 0 0 8px;
+}
+
+.dpad-right {
+  top: 46px;
+  right: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 0 8px 8px 0;
+}
+
+.dpad-center {
+  position: absolute;
+  top: 46px;
+  left: 46px;
+  width: 48px;
+  height: 48px;
+  background: rgba(20, 22, 34, 0.85);
+  border: 1px solid rgba(80, 80, 100, 0.4);
+}
+
+/* Grupo Central (Botão de Mapa) */
+.touch-center-group {
+  pointer-events: auto;
+  margin-bottom: 8px;
+}
+
+.touch-pill-button {
+  background: rgba(30, 32, 48, 0.75);
+  border: 1.5px solid rgba(124, 124, 124, 0.5);
+  color: #e4a050;
+  font: bold 12px/1 sans-serif;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  transition: background 0.05s;
+}
+
+.touch-pill-button.pressed {
+  background: rgba(248, 184, 0, 0.4);
+  border-color: #f8b800;
+  color: #fff;
+}
+
+/* Botões de Ação na Direita */
+.action-buttons-wrapper {
+  pointer-events: auto;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.touch-action-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgba(252, 252, 252, 0.3);
+  font: bold 20px/1 sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  transition: transform 0.05s ease, filter 0.05s ease;
+}
+
+.touch-action-button:active,
+.touch-action-button.pressed {
+  transform: scale(0.92);
+  filter: brightness(1.3);
+}
+
+/* Botão B: Cancelar / Voltar */
+.button-b {
+  background: radial-gradient(circle at 35% 35%, #444444 0%, #1e1e1e 100%);
+  color: #fcfcfc;
+  transform: translateY(14px);
+}
+
+/* Botão A: Confirmar / Interagir */
+.button-a {
+  background: radial-gradient(circle at 35% 35%, #e83810 0%, #881400 100%);
+  color: #ffffff;
+  border-color: rgba(248, 216, 120, 0.6);
+}
+
+@media (max-width: 600px) {
+  .touch-controls {
+    height: 180px;
+    padding: 8px 12px 16px;
+  }
+  .dpad-wrapper {
+    width: 125px;
+    height: 125px;
+  }
+  .dpad-up, .dpad-down, .dpad-left, .dpad-right, .dpad-center {
+    width: 41px;
+    height: 41px;
+  }
+  .dpad-up, .dpad-down { left: 42px; }
+  .dpad-left, .dpad-right { top: 42px; }
+  .dpad-center { top: 42px; left: 42px; }
+  .touch-action-button {
+    width: 52px;
+    height: 52px;
+    font-size: 18px;
+  }
+}

@@ -1,0 +1,277 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 12,
+  "height": 10,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "properties": [
+    {
+      "name": "id",
+      "type": "string",
+      "value": "cabana_orun"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "value": "CABANA DE ORUN"
+    },
+    {
+      "name": "mapType",
+      "type": "string",
+      "value": "interior"
+    },
+    {
+      "name": "music",
+      "type": "string",
+      "value": "town"
+    },
+    {
+      "name": "boundaryTile",
+      "type": "string",
+      "value": "black_void"
+    },
+    {
+      "name": "exitOnEdge",
+      "type": "bool",
+      "value": false
+    },
+    {
+      "name": "edgeExit",
+      "type": "string",
+      "value": ""
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "luminario_tileset",
+      "tilewidth": 16,
+      "tileheight": 16
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "terreno",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 10,
+      "data": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        38,
+        38,
+        31,
+        31,
+        31,
+        31,
+        31,
+        33,
+        31,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        23,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        31,
+        31,
+        31,
+        31,
+        15,
+        31,
+        31,
+        31,
+        31,
+        31,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": 2,
+      "name": "objetos",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "saida",
+          "type": "warp",
+          "x": 80,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "target",
+              "type": "string",
+              "value": "overworld:cabana_orun"
+            },
+            {
+              "name": "arriveDir",
+              "type": "string",
+              "value": "down"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "bau_ervas",
+          "type": "chest",
+          "x": 32,
+          "y": 96,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "chestId",
+              "type": "string",
+              "value": "bau_ervas_brejo"
+            },
+            {
+              "name": "item",
+              "type": "string",
+              "value": "ervas_brejo"
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "value": "Você recolheu as Ervas do\nBrejo para Vau-Cinza!"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Velho Orun",
+          "type": "npc",
+          "x": 96,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_elder"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "O que você matou na\ncaverna tinha nome.\nUlan guardava a porta."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

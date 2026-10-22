@@ -1,0 +1,392 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 14,
+  "height": 12,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "properties": [
+    {
+      "name": "id",
+      "type": "string",
+      "value": "castelo_subsolo"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "value": "SUBSOLO DO CASTELO"
+    },
+    {
+      "name": "mapType",
+      "type": "string",
+      "value": "interior"
+    },
+    {
+      "name": "music",
+      "type": "string",
+      "value": "castle"
+    },
+    {
+      "name": "boundaryTile",
+      "type": "string",
+      "value": "black_void"
+    },
+    {
+      "name": "exitOnEdge",
+      "type": "bool",
+      "value": false
+    },
+    {
+      "name": "edgeExit",
+      "type": "string",
+      "value": ""
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "luminario_tileset",
+      "tilewidth": 16,
+      "tileheight": 16
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "terreno",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "width": 14,
+      "height": 12,
+      "data": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        27,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        19,
+        20,
+        20,
+        20,
+        20,
+        23,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ]
+    },
+    {
+      "id": 2,
+      "name": "objetos",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "escada_sobe",
+          "type": "warp",
+          "x": 32,
+          "y": 32,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "target",
+              "type": "string",
+              "value": "castelo:escada_desce"
+            },
+            {
+              "name": "arriveDir",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "trigger",
+              "type": "string",
+              "value": "stairs"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Baú do Subsolo",
+          "type": "chest",
+          "x": 160,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "chestId",
+              "type": "string",
+              "value": "chest_castelo_subsolo"
+            },
+            {
+              "name": "gold",
+              "type": "int",
+              "value": 120
+            },
+            {
+              "name": "message",
+              "type": "string",
+              "value": "Você abriu o baú real!\nEncontrou 120 moedas de ouro!"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "Alquimista Real",
+          "type": "npc",
+          "x": 96,
+          "y": 112,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_elder"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "up"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Poucos descem a este calabouço.\nPoupe suas ervas para a caverna!"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "diario_rei",
+          "type": "sign",
+          "x": 80,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "DIÁRIO DE AUREN"
+            },
+            {
+              "name": "setFlag",
+              "type": "string",
+              "value": "diario_auren_lido"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "Diário de Auren: 'No Inverno\nde Cinzas abri a veia do\nlume para salvar o povo...\n---\nEra só por um inverno.\nMas o lume pede mais a\ncada colheita. Perdoem-me.'"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "name": "Rei Auren",
+          "type": "npc",
+          "x": 128,
+          "y": 96,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_king"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "showIfFlag",
+              "type": "string",
+              "value": "selo_veyra_obtido"
+            },
+            {
+              "name": "hideIfFlag",
+              "type": "string",
+              "value": "auren_derrotado"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Você trouxe o Selo de\nVeyra, [NOME]... Mas o\nlume já faz parte de mim!"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

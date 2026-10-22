@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Saída de build
+dist/
+dist-ssr/
+
+# Logs e arquivos locais
+*.local
+*.log
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Referências locais de desmontagem
+dragon-warrior-info-master/

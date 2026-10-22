@@ -1,0 +1,572 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 16,
+  "height": 14,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "properties": [
+    {
+      "name": "id",
+      "type": "string",
+      "value": "cidade_2"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "value": "PORTO DO SOL"
+    },
+    {
+      "name": "mapType",
+      "type": "string",
+      "value": "cidade"
+    },
+    {
+      "name": "music",
+      "type": "string",
+      "value": "town"
+    },
+    {
+      "name": "boundaryTile",
+      "type": "string",
+      "value": "grass"
+    },
+    {
+      "name": "exitOnEdge",
+      "type": "bool",
+      "value": true
+    },
+    {
+      "name": "edgeExit",
+      "type": "string",
+      "value": "saida"
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "luminario_tileset",
+      "tilewidth": 16,
+      "tileheight": 16
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "terreno",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 14,
+      "data": [
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        7,
+        7,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        7,
+        7,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        12,
+        12,
+        12,
+        12,
+        12,
+        7,
+        7,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        13,
+        13,
+        13,
+        13,
+        13,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        13,
+        13,
+        15,
+        13,
+        13,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        8,
+        8,
+        8,
+        8,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        19,
+        9,
+        8,
+        8,
+        8,
+        8,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        8,
+        8,
+        8,
+        8,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        8,
+        8,
+        8,
+        8,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "id": 2,
+      "name": "objetos",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "saida",
+          "type": "warp",
+          "x": 112,
+          "y": 0,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "target",
+              "type": "string",
+              "value": "overworld:cidade_2"
+            },
+            {
+              "name": "arriveDir",
+              "type": "string",
+              "value": "down"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "caixote_cais",
+          "type": "sign",
+          "x": 64,
+          "y": 160,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "CAIXOTE DO CAIS"
+            },
+            {
+              "name": "setFlag",
+              "type": "string",
+              "value": "garo_carga_vista"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "Há correntes de ferro no\nfundo do caixote... e uma\ncriança Veyra escondida!\n---\nVocê solta os grilhões em\nsegredo. Garo trafica\ncativos para a Coroa!"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Garo",
+          "type": "npc",
+          "x": 80,
+          "y": 160,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_merchant"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "altFlag",
+              "type": "string",
+              "value": "garo_carga_vista"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Bem-vindo ao Porto do Sol!\nMeus navios levam suprimento\npara as minas da Coroa."
+            },
+            {
+              "name": "altDialogue",
+              "type": "string",
+              "value": "Cargas especiais? Mão de\nobra contratada, herói.\nTudo dentro da lei.\n---\nAs correntes? Costume\ndo ofício. Só isso."
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": "Mestre Tavo",
+          "type": "npc",
+          "x": 160,
+          "y": 80,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_guard"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "hideIfFlag",
+              "type": "string",
+              "value": "tavo_morto"
+            },
+            {
+              "name": "setFlagOnTalk",
+              "type": "string",
+              "value": "tavo_investigando"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Bom ver você, [NOME]!\nInvestiguei os caixotes\nde Garo no cais ao sul...\n---\nEles levam gente presa!\nE o rebelde Brasca está\nna Gruta da Costa a leste!"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "Íris",
+          "type": "npc",
+          "x": 192,
+          "y": 80,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_villager"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "left"
+            },
+            {
+              "name": "altFlag",
+              "type": "string",
+              "value": "iris_traicao_revelada"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Vael me mandou vigiar o\nporto, [NOME]... Meu irmão\nPim depende de mim."
+            },
+            {
+              "name": "altDialogue",
+              "type": "string",
+              "value": "Perdoe-me, [NOME]! Vael\ntinha Pim como refém na\nCripta do Santuário!"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "Mercador do Porto",
+          "type": "npc",
+          "x": 64,
+          "y": 96,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_merchant"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Armas marítimas e elixires\nrecém-chegados ao cais!"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "name": "Estalajadeira do Porto",
+          "type": "npc",
+          "x": 208,
+          "y": 128,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_villager"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "A brisa do mar acalma a\nmente. Deseja descansar?"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "name": "Almirante Brasca",
+          "type": "npc",
+          "x": 128,
+          "y": 176,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_guard"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "up"
+            },
+            {
+              "name": "showIfFlag",
+              "type": "string",
+              "value": "brasca_poupado"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Você poupou minha vida na\ngruta, [NOME]. Meu navio\nestará pronto quando pedir!"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "name": "Marinheiro",
+          "type": "npc",
+          "x": 112,
+          "y": 160,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_villager"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "O vento sul está forte hoje!\nEm breve os navios partirão\npara além-mar."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

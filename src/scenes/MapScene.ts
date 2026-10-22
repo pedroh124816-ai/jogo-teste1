@@ -1,0 +1,1521 @@
+import { Scene } from '../engine/Scene';
+import { Renderer } from '../engine/Renderer';
+import { Input } from '../engine/Input';
+import { SceneManager } from '../engine/SceneManager';
+import { Camera } from '../engine/Camera';
+import { TiledMap } from '../engine/TiledMap';
+import { Player } from '../entities/Player';
+import { NPC } from '../entities/NPC';
+import { DialogueBox } from '../engine/DialogueBox';
+import { AssetManager } from '../assets/AssetManager';
+import { CONFIG } from '../config';
+import { NES_COLORS } from '../engine/Palette';
+import { MenuScene } from './MenuScene';
+import { BattleScene } from './BattleScene';
+import { WorldMapScene } from './WorldMapScene';
+import { ShopScene } from './ShopScene';
+import { InnScene } from './InnScene';
+import { Direction } from '../assets/heroGraphics';
+import { MAP_REGISTRY } from '../data/maps';
+import { gameState } from '../state/GameState';
+import { rollEncounterForTerrain, getMonsterDef } from '../data/monsters';
+import { soundManager, BgmTrackId } from '../engine/AudioManager';
+
+type WarpState = 'none' | 'fade_out' | 'fade_in';
+
+interface PendingWarp {
+  targetMap: string;
+  targetWarp?: string;
+  targetX?: number;
+  targetY?: number;
+  targetDir?: Direction;
+}
+
+export class MapScene implements Scene {
+  public readonly name = 'MapScene';
+  public readonly isTransparent = false;
+
+  private sceneManager: SceneManager;
+  private input: Input;
+  private assetManager: AssetManager;
+
+  private camera: Camera;
+  private currentMapId = 'overworld';
+  private currentMap!: TiledMap;
+  private npcs: NPC[] = [];
+  private player: Player;
+
+  private dialogueBox: DialogueBox;
+
+  // Estado de transição entre mapas (Warp com Fade)
+  private warpState: WarpState = 'none';
+  private warpProgress = 0;
+  private pendingWarp: PendingWarp | null = null;
+
+  private showDebug: boolean = CONFIG.debug.overlayOnStart;
+  private locationBannerTitle = '';
+  private locationBannerTimer = 180; // Some após ~3 segundos
+
+  constructor(
+    sceneManager: SceneManager,
+    input: Input,
+    assetManager?: AssetManager,
+    initialMapId: string = 'overworld',
+    initialX: number = CONFIG.player.startTile.x,
+    initialY: number = CONFIG.player.startTile.y,
+    initialDir: Direction = 'down',
+    autoStartRoyalAudience = false
+  ) {
+    this.sceneManager = sceneManager;
+    this.input = input;
+    this.assetManager = assetManager ?? new AssetManager();
+
+    this.camera = new Camera();
+    this.dialogueBox = new DialogueBox();
+    this.player = new Player(initialX, initialY);
+
+    // Carrega o mapa inicial
+    this.loadMap(initialMapId, initialX, initialY, initialDir);
+
+    if (autoStartRoyalAudience && initialMapId === 'castelo') {
+      const rei = this.npcs.find((n) => n.name === 'Rei Auren');
+      if (rei) {
+        this.interactWithNpcEntity(rei);
+      }
+    }
+  }
+
+  public setAssetManager(assetManager: AssetManager): void {
+    this.assetManager = assetManager;
+  }
+
+  /**
+   * Carrega um mapa a partir do registro automático em src/data/maps/,
+   * posiciona câmera, carrega entidades, baús abertos e atualiza dimensões.
+   */
+  public loadMap(
+    mapId: string,
+    spawnTileX?: number,
+    spawnTileY?: number,
+    spawnDir?: Direction,
+    destWarpName?: string
+  ): void {
+    const entry = MAP_REGISTRY[mapId];
+    if (!entry) {
+      throw new Error(`Mapa '${mapId}' não encontrado no registro automático de mapas.`);
+    }
+
+    this.currentMapId = mapId;
+    this.currentMap = new TiledMap(mapId, entry.json);
+
+    // Atualiza limites da câmera
+    this.camera.setMapBounds(this.currentMap.width, this.currentMap.height);
+
+    // Carrega NPCs cadastrados no JSON do mapa
+    this.npcs = this.currentMap.getNpcDefs().map((def) => {
+      return new NPC({
+        id: def.id,
+        name: def.name,
+        spriteId: def.spriteId,
+        tileX: def.tileX,
+        tileY: def.tileY,
+        direction: def.direction,
+        dialogue: def.dialogue,
+        showIfFlag: def.showIfFlag,
+        hideIfFlag: def.hideIfFlag,
+        setFlagOnTalk: def.setFlagOnTalk,
+        altFlag: def.altFlag,
+        altDialogue: def.altDialogue,
+      });
+    });
+
+    // Se houver baús já abertos neste mapa, atualiza visualmente para 'chest_open'
+    for (const chest of this.currentMap.getChests()) {
+      if (gameState.openedChests.has(chest.id)) {
+        this.currentMap.setTileAt(chest.tileX, chest.tileY, 'chest_open');
+      }
+    }
+
+    // Alterações dinâmicas de terreno no overworld conforme progressão de Atos
+    if (mapId === 'overworld') {
+      // Ato 2: Ponte do Sul (48, 68..70) e Passo do Santuário (82, 41..43) só abrem após concluir o Ato 1 (Selo Real)
+      if (!gameState.getFlag('ato1_concluido')) {
+        this.currentMap.setTileAt(48, 68, 'water');
+        this.currentMap.setTileAt(48, 69, 'water');
+        this.currentMap.setTileAt(48, 70, 'water');
+        this.currentMap.setTileAt(82, 41, 'high_mountain');
+        this.currentMap.setTileAt(82, 42, 'high_mountain');
+        this.currentMap.setTileAt(82, 43, 'high_mountain');
+      }
+
+      // Ato 3: Ponte do Pântano (30, 68..70) e Passo de Pedrasul (36, 37..39) só abrem após concluir o Ato 2
+      if (!gameState.getFlag('ato2_concluido')) {
+        this.currentMap.setTileAt(30, 68, 'water');
+        this.currentMap.setTileAt(30, 69, 'water');
+        this.currentMap.setTileAt(30, 70, 'water');
+        this.currentMap.setTileAt(36, 37, 'high_mountain');
+        this.currentMap.setTileAt(36, 38, 'high_mountain');
+        this.currentMap.setTileAt(36, 39, 'high_mountain');
+      }
+
+      // Cobre-Alto: Ponte de Cobre (58..60, 28) exige a Chave de Cobre do Rei Auren e cai após derrotar Daros
+      if (!gameState.getFlag('chave_cobre_recebida') || gameState.getFlag('ponte_destruida')) {
+        this.currentMap.setTileAt(58, 28, 'water');
+        this.currentMap.setTileAt(59, 28, 'water');
+        this.currentMap.setTileAt(60, 28, 'water');
+      }
+
+      // Ato 4: Trilha secreta do Refúgio das Raízes (25..27, 56) só abre após a ruptura no Castelo
+      if (!gameState.getFlag('refugio_aberto')) {
+        this.currentMap.setTileAt(25, 56, 'high_mountain');
+        this.currentMap.setTileAt(26, 56, 'high_mountain');
+        this.currentMap.setTileAt(27, 56, 'high_mountain');
+      }
+
+      // Ato 5: Recife submerso para a Ilha Veyra (64, 102..104) só abre após derrotar Lorde Vael
+      if (!gameState.getFlag('ilha_acessivel')) {
+        this.currentMap.setTileAt(64, 102, 'water');
+        this.currentMap.setTileAt(64, 103, 'water');
+        this.currentMap.setTileAt(64, 104, 'water');
+      }
+    }
+
+    // Se foi especificado um warp de destino por id/nome, posiciona exatamente nele
+    if (destWarpName) {
+      if (mapId === 'overworld' && destWarpName === 'cobre_alto' && gameState.getFlag('ponte_destruida')) {
+        this.player.setTilePosition(57, 28, 'left');
+      } else {
+        const destWarp = this.currentMap.getWarpByName(destWarpName);
+        if (destWarp) {
+          this.player.setTilePosition(destWarp.tileX, destWarp.tileY, destWarp.arriveDir);
+        } else if (spawnTileX !== undefined && spawnTileY !== undefined) {
+          this.player.setTilePosition(spawnTileX, spawnTileY, spawnDir);
+        }
+      }
+    } else if (spawnTileX !== undefined && spawnTileY !== undefined) {
+      this.player.setTilePosition(spawnTileX, spawnTileY, spawnDir);
+    }
+
+    // Sincroniza localização atual do herói no GameState para o sistema de Save/Load
+    gameState.updateLocation(
+      this.currentMapId,
+      this.player.tileX,
+      this.player.tileY,
+      this.player.direction
+    );
+
+    // Centraliza a câmera no herói
+    this.camera.follow(this.player.pixelX, this.player.pixelY);
+
+    // Banner de localização
+    this.locationBannerTitle = this.currentMap.title;
+    this.locationBannerTimer = 180;
+    this.syncMapBgm();
+  }
+
+  private syncMapBgm(): void {
+    const musicProp = this.currentMap?.music || 'overworld';
+    let track: BgmTrackId = 'overworld';
+    if (musicProp === 'castle' || this.currentMap?.mapType === 'castelo') track = 'castle';
+    else if (musicProp === 'town' || this.currentMap?.mapType === 'cidade' || this.currentMap?.mapType === 'interior') track = 'town';
+    else if (musicProp === 'cave' || this.currentMap?.mapType === 'caverna') track = 'cave';
+    else if (musicProp === 'shrine' || this.currentMapId === 'santuario' || this.currentMapId === 'refugio_raizes' || this.currentMapId === 'templo_coracao') track = 'shrine';
+    soundManager.playBgm(track);
+  }
+
+  public enter(): void {
+    this.camera.follow(this.player.pixelX, this.player.pixelY);
+    this.syncMapBgm();
+  }
+
+  private interactWithNpcEntity(npc: NPC): void {
+    npc.faceHero(this.player.tileX, this.player.tileY);
+
+    const shopNpcNames = [
+      'Comerciante',
+      'Mercador do Porto',
+      'Mercador de Vau',
+      'Mercador de Rochedo',
+      'Mercador de Cobre',
+      'Artesã Veyra',
+    ];
+    if (this.currentMapId === 'cidade_1_loja' || shopNpcNames.includes(npc.name)) {
+      npc.resetDirection();
+      this.sceneManager.push(new ShopScene(this.sceneManager, this.input, this.currentMapId));
+      return;
+    }
+
+    const innNpcNames = [
+      'Hospedeiro',
+      'Estalajadeira do Porto',
+      'Estalajadeira de Vau',
+      'Estalajadeira de Rochedo',
+      'Guardiã do Repouso',
+    ];
+    if (this.currentMapId === 'cidade_1_estalagem' || innNpcNames.includes(npc.name)) {
+      npc.resetDirection();
+      this.sceneManager.push(new InnScene(this.sceneManager, this.input, 10));
+      return;
+    }
+
+    // 1. Chefe do Ato 1: Ulan, a Fera (Caverna B2)
+    if (npc.name === 'Ulan, a Fera') {
+      const introText = npc.getActiveDialogue();
+      this.dialogueBox.start(npc.name, introText, () => {
+        npc.resetDirection();
+        const ulanDef = getMonsterDef('ulan_fera')!;
+        this.sceneManager.push(
+          new BattleScene(
+            this.sceneManager,
+            this.input,
+            ulanDef,
+            this.assetManager,
+            () => this.handleHeroDefeat(),
+            () => {
+              gameState.setFlag('fera_derrotada', true);
+              gameState.setFlag('pulseira_ulan_vista', true);
+              gameState.addItem('pulseira_antiga', 1);
+              this.dialogueBox.start(
+                'Ulan, a Fera',
+                '...Aneth?\n---\nPerdoe... não pude\nguardar a porta...\n---\nNo pulso da fera brilha\numa Pulseira Antiga com\no símbolo do seu Medalhão!\n---\nVolte ao Castelo Real e\nrelate tudo ao Rei Auren.'
+              );
+            }
+          )
+        );
+      });
+      return;
+    }
+
+    // 1.1 Duelo do Ato 2: Almirante Brasca na Gruta da Costa
+    if (npc.name === 'Almirante Brasca' && this.currentMapId === 'gruta_costa') {
+      if (gameState.getFlag('brasca_poupado')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Nos veremos no cais do\nPorto do Sol, [NOME].\nVá ao Santuário da Luz!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      this.dialogueBox.start(
+        npc.name,
+        'Eu só abro as jaulas que\no seu Rei fecha.\nMate-me, se tiver coragem.',
+        () => {
+          npc.resetDirection();
+          const brascaDef = getMonsterDef('brasca')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              brascaDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                this.dialogueBox.startWithChoice(
+                  'ALMIRANTE BRASCA',
+                  'Brasca cai de joelhos,\nferido. O que você fará\ncom o rebelde?',
+                  ['Poupar', 'Executar'],
+                  (choiceIdx) => {
+                    if (choiceIdx === 0) {
+                      gameState.setFlag('brasca_poupado', true);
+                      this.dialogueBox.start(
+                        'Almirante Brasca',
+                        'Você guarda a espada.\nBrasca promete ajudá-lo\nno Porto do Sol!\n---\nAgora leve seu Medalhão\nao Santuário da Luz!'
+                      );
+                    } else {
+                      gameState.setFlag('brasca_executado', true);
+                      this.dialogueBox.start(
+                        'GRUTA DA COSTA',
+                        'Você cumpre a ordem real.\nO mar leva o silêncio da\ngruta. Vá ao Santuário!'
+                      );
+                    }
+                  }
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    // 1.2 Santuário da Luz (Ato 2): Sumo Sacerdote Hesper e Irmã Olívia
+    if (npc.name === 'Sumo Sacerdote Hesper' && this.currentMapId === 'santuario') {
+      this.dialogueBox.start(
+        npc.name,
+        'Aproxime o Medalhão do\naltar sagrado, [NOME]...\n---\nO Medalhão brilha forte!\nHesper empalidece ao ver\no símbolo de Veyra!\n---\n"Esconda isso, herói!\nNinguém deve ver esse\nsinal antigo!"',
+        () => {
+          gameState.setFlag('medalhao_brilhou', true);
+          gameState.setFlag('hesper_viu_medalhao', true);
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Irmã Olívia' && this.currentMapId === 'santuario') {
+      if (
+        (gameState.getFlag('rei_protegeu_vael') || gameState.getFlag('origem_revelada')) &&
+        !gameState.getFlag('lente_olivia_obtida')
+      ) {
+        this.dialogueBox.start(
+          npc.name,
+          'Tome a Lente da Verdade.\nEla revela a aura de\nquem consome lume humano!\n---\nUse a Pedra do Eco no\naltar ao norte para descer\nà Cripta do Refino!',
+          () => {
+            gameState.setFlag('lente_olivia_obtida', true);
+            if (gameState.getItemQuantity('lente_olivia') === 0) {
+              gameState.addItem('lente_olivia', 1);
+            }
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      this.dialogueBox.start(
+        npc.name,
+        'Não confie na luz que\nsó brilha para os ricos.\n---\nPergunte aos que vivem\nnos porões, filho.',
+        () => {
+          gameState.setFlag('olivia_aviso_dado', true);
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    // 1.3 Brumaterra (Ato 3): Regente Olo, Curandeira de Vau e Velho Orun
+    if (npc.name === 'Regente Olo' && this.currentMapId === 'vau_cinza') {
+      if (gameState.getFlag('olo_ouvido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Obrigado por ouvir a voz\nde Brumaterra, [NOME].\nProcure Orun na cabana!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      this.dialogueBox.startWithChoice(
+        npc.name,
+        'Nós não criamos a Treva.\nEla desce dos rios que\no seu Rei suja.\n---\nOuça-me, só uma vez.',
+        ['Ouvir Olo', 'Ignorar'],
+        (choiceIdx) => {
+          npc.resetDirection();
+          if (choiceIdx === 0) {
+            gameState.setFlag('olo_ouvido', true);
+            this.dialogueBox.start(
+              npc.name,
+              'Olo mostra a água verde\nque desce das minas do\nnorte e envenena o rio!\n---\n"Procure o Velho Orun na\ncabana do pântano, herói."'
+            );
+          } else {
+            this.dialogueBox.start(
+              npc.name,
+              'Você exige apenas o tributo\nem nome de Auren. Olo\ncala-se com tristeza.'
+            );
+          }
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Curandeira de Vau' && this.currentMapId === 'vau_cinza') {
+      if (gameState.getFlag('ervas_entregues')) {
+        this.dialogueBox.start(
+          npc.name,
+          'O chá das Ervas do Brejo\nsalvou as crianças! O rio\nbrilha por culpa da mina!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      if (gameState.getItemQuantity('ervas_brejo') > 0) {
+        this.dialogueBox.start(
+          npc.name,
+          'Você trouxe as Ervas do\nBrejo! Obrigada, herói!\nTome 80 moedas de ouro!\n---\nVeja como a raiz brilha:\né o resíduo do lume que\ndesce das minas do Rei!',
+          () => {
+            gameState.removeItem('ervas_brejo', 1);
+            gameState.setFlag('ervas_entregues', true);
+            gameState.addGold(80);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    if (npc.name === 'Velho Orun' && this.currentMapId === 'cabana_orun') {
+      this.dialogueBox.start(
+        npc.name,
+        'O que você matou na\ncaverna tinha nome.\nUlan guardava a porta.\n---\nEle protegia o povo Veyra\ndos escavadores de Auren!',
+        () => {
+          gameState.setFlag('orun_encontrado', true);
+          gameState.setFlag('fera_era_guardiao', true);
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    // 1.4 Pedrasul (Ato 3): Rainha Maren, Padeiro e Cativo Veyra na Mina Velha
+    if (npc.name === 'Rainha Maren' && this.currentMapId === 'rochedo') {
+      if (gameState.getFlag('maren_ouvida')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Entre na Mina Velha a\nleste de Rochedo, [NOME],\ne veja a verdade!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      this.dialogueBox.startWithChoice(
+        npc.name,
+        'Auren exige minério, mas\nleva nossos jovens para\nas galerias de Brenn!\n---\nQuer ouvir a verdade\nsobre a Mina Velha?',
+        ['Ouvir Maren', 'Ignorar'],
+        (choiceIdx) => {
+          npc.resetDirection();
+          if (choiceIdx === 0) {
+            gameState.setFlag('maren_ouvida', true);
+            this.dialogueBox.start(
+              npc.name,
+              'Maren revela que Lorde\nBrenn escraviza cativos na\nMina Velha a leste!'
+            );
+          } else {
+            this.dialogueBox.start(
+              npc.name,
+              'Você cobra o tributo real\nsem ouvir as queixas do\npovo de Pedrasul.'
+            );
+          }
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Padeiro de Pedrasul' && this.currentMapId === 'rochedo') {
+      if (gameState.getFlag('pao_entregue')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Obrigado por alimentar os\ncativos da Mina Velha!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      if (gameState.getItemQuantity('pao_pedra') === 0) {
+        this.dialogueBox.start(
+          npc.name,
+          'Leve este Pão de Pedra\naos trabalhadores presos\nna Mina Velha a leste!',
+          () => {
+            gameState.addItem('pao_pedra', 1);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    if (npc.name === 'Cativo Veyra' && this.currentMapId === 'mina_velha') {
+      gameState.setFlag('mina_velha_vista', true);
+      if (gameState.getItemQuantity('pao_pedra') > 0 && !gameState.getFlag('pao_entregue')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Pão de Pedra! Você salvou\nnossas vidas na mina!\nTome 80 moedas de ouro!\n---\nAuren nos prendeu aqui\npara extrair lume verde\npara a Cripta de Vael!',
+          () => {
+            gameState.removeItem('pao_pedra', 1);
+            gameState.setFlag('pao_entregue', true);
+            gameState.addGold(80);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    // 1.5 Cobre-Alto (Ato 3): Seu Tomé ("O relojoeiro") e Chefe Rei Daros
+    if (npc.name === 'Seu Tomé' && this.currentMapId === 'cobre_alto') {
+      if (gameState.getFlag('relojoeiro_resolvido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Ouça o carrilhão bater!\nO relógio de Cobre-Alto\njamais esquecerá você!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      if (!gameState.getFlag('daros_derrotado') && gameState.getItemQuantity('peca_relogio') > 0) {
+        this.dialogueBox.start(
+          npc.name,
+          'A Engrenagem Fina da Mina\nVelha! O grande relógio\nvolta a funcionar!\n---\nTome 120 moedas de ouro\npela sua bondade, [NOME]!',
+          () => {
+            gameState.removeItem('peca_relogio', 1);
+            gameState.setFlag('relojoeiro_resolvido', true);
+            gameState.addGold(120);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    if (npc.name === 'Rei Daros' && this.currentMapId === 'cobre_alto') {
+      gameState.setFlag('cobre_alto_traido', true);
+      this.dialogueBox.start(
+        npc.name,
+        'Você abriu o meu portão!\nEu recebi você como\nfilho de um aliado!',
+        () => {
+          npc.resetDirection();
+          const darosDef = getMonsterDef('daros')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              darosDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                gameState.setFlag('daros_derrotado', true);
+                gameState.setFlag('ponte_destruida', true);
+                gameState.setFlag('ato3_concluido', true);
+                this.dialogueBox.start(
+                  'QUEDA DE COBRE-ALTO',
+                  'Daros tomba! As tropas de\nAuren tomam a fortaleza\nem chamas!\n---\nPríncipe Dagan escapa e\ndestrói a Ponte de Cobre!\n---\nVolte ao Castelo Real e\nconfronte o Rei Auren!\n[FIM DO ATO 3]'
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    // 1.6 Ato 4: Mestre Tavo, Capitã Marta, Sael, Orun, Príncipe Dagan e Lorde Vael
+    if (npc.name === 'Mestre Tavo' && this.currentMapId === 'castelo') {
+      this.dialogueBox.start(
+        npc.name,
+        npc.getActiveDialogue(),
+        () => {
+          gameState.setFlag('tavo_morto', true);
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Capitã Marta' && this.currentMapId === 'castelo') {
+      if (gameState.getFlag('selo_veyra_obtido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'A guarda real está com\nvocê, [NOME]! Desça à\nCâmara do Lume!',
+          () => {
+            gameState.setFlag('castelo_invadido', true);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      if (gameState.getFlag('rei_protegeu_vael')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Fuja pela saída sul,\n[NOME]! Vá ao Refúgio das\nRaízes na Grande Floresta!',
+          () => {
+            gameState.setFlag('marta_deixou_fugir', true);
+            gameState.setFlag('refugio_aberto', true);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    if (npc.name === 'Sael' && this.currentMapId === 'refugio_raizes') {
+      this.dialogueBox.start(
+        npc.name,
+        npc.getActiveDialogue(),
+        () => {
+          gameState.setFlag('refugio_aberto', true);
+          gameState.setFlag('origem_revelada', true);
+          gameState.setFlag('medalhao_verdade', true);
+          gameState.setFlag('travessia_feita', true);
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Velho Orun' && this.currentMapId === 'refugio_raizes') {
+      this.dialogueBox.start(
+        npc.name,
+        'Tome a Pedra do Eco e\naprenda a magia Eco,\nfilho de Aneth!\n---\nCom ela você abrirá a\nCripta do Refino e o\nTemplo do Coração!',
+        () => {
+          gameState.setFlag('pedra_eco_obtida', true);
+          if (gameState.getItemQuantity('pedra_eco') === 0) {
+            gameState.addItem('pedra_eco', 1);
+          }
+          if (!gameState.hasSpell('eco')) {
+            gameState.spells.push('eco');
+          }
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Príncipe Dagan' && this.currentMapId === 'rochedo') {
+      if (gameState.getFlag('dagan_aliado')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Você poupou meu povo e\nouviu Brumaterra e Maren!\nLutarei ao seu lado!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      this.dialogueBox.start(
+        npc.name,
+        'Você abriu o portão de\nmeu pai para Auren!\nPague com seu aço!',
+        () => {
+          gameState.setFlag('dagan_inimigo', true);
+          npc.resetDirection();
+          const daganDef = getMonsterDef('dagan')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              daganDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                this.dialogueBox.start(
+                  'Príncipe Dagan',
+                  'Dagan recua ferido:\n"Derrube Auren se quiser\nprovar sua honra!"'
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Lorde Vael' && this.currentMapId === 'cripta_refino') {
+      this.dialogueBox.start(
+        npc.name,
+        'Então o filho de Aneth\ndesceu à fornalha! Seu\nlume alimentará o trono!',
+        () => {
+          npc.resetDirection();
+          const vaelDef = getMonsterDef('vael')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              vaelDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                gameState.setFlag('vael_derrotado', true);
+                gameState.setFlag('pim_salvo', true);
+                gameState.setFlag('hesper_caiu', true);
+                gameState.setFlag('olivia_lider_santuario', true);
+                gameState.setFlag('iris_traicao_revelada', true);
+                gameState.setFlag('ato4_concluido', true);
+                this.dialogueBox.startWithChoice(
+                  'CRIPTA DO REFINO',
+                  'Vael cai! Pim e os cativos\nsão libertados! Íris surge\ne confessa sua espionagem.\n---\nEla implora perdão por\nter vigiado você para\nVael. O que decidir?',
+                  ['Perdoar Íris', 'Exilar Íris'],
+                  (choiceIdx) => {
+                    if (choiceIdx === 0) {
+                      gameState.setFlag('iris_perdoada', true);
+                      this.dialogueBox.start(
+                        'Íris',
+                        'Você perdoa Íris. Ela\npromete ajudar Olívia a\nguiar o Santuário!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra! [FIM DO ATO 4]'
+                      );
+                    } else {
+                      this.dialogueBox.start(
+                        'Irmã Olívia',
+                        'Íris parte em exílio.\nOlívia assume o Santuário\ne liberta os cativos!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra! [FIM DO ATO 4]'
+                      );
+                    }
+                  }
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    // 1.7 Ato 5: Travessia para Ilha Veyra, Templo do Coração e Confronto Final na Câmara do Lume
+    if (
+      (npc.name === 'Almirante Brasca' || npc.name === 'Marinheiro') &&
+      this.currentMapId === 'cidade_2' &&
+      gameState.getFlag('ato4_concluido')
+    ) {
+      const msg =
+        npc.name === 'Almirante Brasca'
+          ? 'Meu navio abriu passagem\npelo recife! Siga ao sul\naté a Ilha Veyra, [NOME]!'
+          : 'O caminho pelo recife ao\nsul está aberto! Rumo à\nIlha Veyra, [NOME]!';
+      this.dialogueBox.start(npc.name, msg, () => {
+        gameState.setFlag('ilha_acessivel', true);
+        npc.resetDirection();
+        this.loadMap('overworld', 36, 54, 'down');
+      });
+      return;
+    }
+
+    if (npc.name === 'Velho Orun' && this.currentMapId === 'templo_coracao') {
+      this.dialogueBox.start(
+        npc.name,
+        'Aqui sua mãe Aneth escondeu\nvocê de Auren, [NOME].\nTome o Selo de Veyra!\n---\nVolte ao Subsolo do\nCastelo Real e encare o\nRei na Câmara do Lume!',
+        () => {
+          gameState.setFlag('templo_coracao_aberto', true);
+          gameState.setFlag('selo_veyra_obtido', true);
+          if (gameState.getItemQuantity('selo_veyra') === 0) {
+            gameState.addItem('selo_veyra', 1);
+          }
+          npc.resetDirection();
+        }
+      );
+      return;
+    }
+
+    if (npc.name === 'Rei Auren' && this.currentMapId === 'castelo_subsolo') {
+      gameState.setFlag('castelo_invadido', true);
+      this.dialogueBox.start(
+        npc.name,
+        'Sem o refino, o reino\napaga, filho de Aneth!\nDefenderei minha coroa!',
+        () => {
+          npc.resetDirection();
+          const aurenDef = getMonsterDef('auren')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              aurenDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                gameState.setFlag('auren_derrotado', true);
+                this.dialogueBox.start(
+                  'Rei Auren',
+                  'Trinta anos carregando\neste fogo... Tome. Veja\nquanto pesa.',
+                  () => {
+                    this.promptFinalCrownChoice();
+                  }
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    // 2. Rei Auren (Progressão dos Atos 1, 2, 3 e 4 no Salão do Trono)
+    if (npc.name === 'Rei Auren') {
+      if (gameState.getFlag('ato3_concluido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Vael faz o que é preciso\npara manter este reino\naceso. Volte ao seu posto.',
+          () => {
+            gameState.setFlag('tavo_morto', true);
+            gameState.setFlag('rei_protegeu_vael', true);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      if (gameState.getFlag('ato2_concluido') && !gameState.getFlag('ato3_concluido')) {
+        const visitedNorth =
+          gameState.getFlag('mina_velha_vista') ||
+          gameState.getFlag('olo_ouvido') ||
+          gameState.getFlag('maren_ouvida') ||
+          gameState.getFlag('orun_encontrado');
+
+        if (visitedNorth && !gameState.getFlag('chave_cobre_recebida')) {
+          this.dialogueBox.start(
+            npc.name,
+            'Bom trabalho em Brumaterra\ne Pedrasul, [NOME]! Resta\napenas o Reino Cobreval.\n---\nTome a Chave de Cobre.\nAbra o portão de Cobre-\nAlto à noite para nós!',
+            () => {
+              gameState.setFlag('chave_cobre_recebida', true);
+              gameState.addItem('chave_cobre', 1);
+              npc.resetDirection();
+            }
+          );
+          return;
+        }
+
+        if (gameState.getFlag('chave_cobre_recebida')) {
+          this.dialogueBox.start(
+            npc.name,
+            'Cruze a Ponte de Cobre a\nnordeste e use a Chave\nem Cobre-Alto, [NOME]!',
+            () => npc.resetDirection()
+          );
+          return;
+        }
+
+        this.dialogueBox.start(
+          npc.name,
+          'Vá a Vau-Cinza no sudoeste\ne a Rochedo no noroeste,\n[NOME]. Traga o tributo!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      const brascaDone = gameState.getFlag('brasca_poupado') || gameState.getFlag('brasca_executado');
+      const santuarioDone = gameState.getFlag('medalhao_brilhou') || gameState.getFlag('olivia_aviso_dado');
+      if (gameState.getFlag('ato1_concluido') && brascaDone && santuarioDone) {
+        this.dialogueBox.start(
+          npc.name,
+          'Então a costa está segura\ne o Santuário abençoou\nsua jornada, [NOME]!\n---\nAgora vá cobrar a aliança\nde Olo em Vau-Cinza e de\nMaren em Rochedo!\n---\nTome 100 de ouro para a\nexpedição às fronteiras!\n[FIM DO ATO 2]',
+          () => {
+            gameState.setFlag('ato2_concluido', true);
+            gameState.addGold(100);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      if (gameState.getFlag('ato1_concluido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Siga ao sul até o Porto\ndo Sol e a Gruta da Costa,\ne visite o Santuário!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      if (gameState.getFlag('brinde_resolvido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Você salvou a aliança,\n[NOME]! Mas o veneno\nveio pelo mar do sul.\n---\nTome o Selo Real e 50 de\nouro. Siga ao sul até o\nPorto do Sol!\n---\n[FIM DO ATO 1: A Sombra\nno Poço - Rumo ao Sul!]',
+          () => {
+            gameState.setFlag('vael_patrono', true);
+            gameState.setFlag('ato1_concluido', true);
+            gameState.addItem('selo_real', 1);
+            gameState.addGold(50);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      if (gameState.getFlag('fera_derrotada')) {
+        if (!gameState.getFlag('banquete_alianca')) {
+          gameState.setFlag('banquete_alianca', true);
+          gameState.flags.ensureBrindeCulpado();
+        }
+        this.dialogueBox.start(
+          npc.name,
+          'Bravo, [NOME]! A fera\ncaiu e o Rei Daros veio\npara o nosso banquete!\n---\nMas o Copeiro Real achou\nveneno na taça do brinde!\nAlguém do Conselho traiu!\n---\nFale com o Copeiro e os\nconselheiros na Ala Oeste\ne descubra o culpado!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      const activeDialogue = npc.getActiveDialogue();
+      this.dialogueBox.start(npc.name, activeDialogue, () => {
+        gameState.setFlag('rei_missao_recebida', true);
+        gameState.setFlag('espada_recebida', true);
+        gameState.setFlag('medalhao_recebido', true);
+        gameState.saveGame(this.currentMapId, this.player.tileX, this.player.tileY, this.player.direction);
+        npc.resetDirection();
+      });
+      return;
+    }
+
+    // 3. Copeiro Real (Missão "O Brinde" no Salão de Banquetes)
+    if (npc.name === 'Copeiro Real' && gameState.getFlag('banquete_alianca')) {
+      if (gameState.getFlag('brinde_resolvido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Graças a você o brinde\nreal foi salvo! O Rei\nAuren o aguarda no Trono!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      const culpado = gameState.flags.ensureBrindeCulpado();
+      let clueText = '';
+      if (culpado === 'brenn') {
+        clueText =
+          'Alguém pôs veneno na taça!\nVi um homem de armadura\npesada e cheiro de forja\n---\nrondando a mesa: foi\nLorde Brenn! Confronte-o\nna sala do Conselho!';
+      } else if (culpado === 'hald') {
+        clueText =
+          'Alguém pôs veneno na taça!\nVi um nobre contando\nmoedas de prata mexer na\n---\ntaça: foi Lorde Hald!\nConfronte-o na sala do\nConselho ao norte!';
+      } else {
+        clueText =
+          'Alguém pôs veneno na taça!\nVi um vulto de manto\nescuro e anel de sinete\n---\njogar pó na taça: foi\nLorde Vael! Confronte-o\nna sala do Conselho!';
+      }
+
+      this.dialogueBox.start(npc.name, clueText, () => npc.resetDirection());
+      return;
+    }
+
+    // 4. Conselheiros suspeitos durante "O Brinde"
+    if (
+      gameState.getFlag('banquete_alianca') &&
+      !gameState.getFlag('brinde_resolvido') &&
+      (npc.name === 'Lorde Brenn' || npc.name === 'Lorde Hald' || npc.name === 'Lorde Vael')
+    ) {
+      const culpado = gameState.flags.ensureBrindeCulpado();
+      const mapSuspect: Record<string, string> = {
+        'Lorde Brenn': 'brenn',
+        'Lorde Hald': 'hald',
+        'Lorde Vael': 'vael',
+      };
+
+      if (mapSuspect[npc.name] === culpado) {
+        this.dialogueBox.start(
+          npc.name,
+          `Você confronta ${npc.name}\ndiante da guarda! Um\nfrasco de veneno cai!\n---\nO complô do brinde foi\ndesmascarado! Volte ao\nTrono e avise o Rei!`,
+          () => {
+            gameState.setFlag('brinde_resolvido', true);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+    }
+
+    const activeDialogue = npc.getActiveDialogue();
+    this.dialogueBox.start(npc.name, activeDialogue, () => {
+      if (npc.setFlagOnTalk) {
+        gameState.setFlag(npc.setFlagOnTalk, true);
+      }
+      npc.resetDirection();
+    });
+  }
+
+  private promptFinalCrownChoice(): void {
+    this.dialogueBox.startWithChoice(
+      'A COROA DE LUMINÁRIO',
+      'A coroa repousa no chão\ndiante da fornalha fria.\nPegar a coroa?',
+      ['Sim', 'Não'],
+      (choiceIdx) => {
+        if (choiceIdx === 1) {
+          this.dialogueBox.start(
+            'Velho Orun',
+            'Alguém precisa segurar\no lume.',
+            () => {
+              this.promptFinalCrownChoice();
+            }
+          );
+          return;
+        }
+
+        gameState.setFlag('final_b_coroa_vazia', true);
+        const pages: string[] = [
+          'A fornalha apagou. Mas\nnos olhos do novo Rei,\nbrilhou uma brasa dourada.',
+          gameState.getFlag('brasca_poupado')
+            ? 'Brasca lidera a frota\nlivre no Porto do Sol.'
+            : 'Sem Brasca, o Porto do\nSol vigia o mar calado.',
+          gameState.getFlag('olo_ouvido')
+            ? 'Em Brumaterra, Olo limpa\nos rios com sua ajuda.'
+            : 'Em Brumaterra, o pântano\nseguiu turvo e distante.',
+          gameState.getFlag('maren_ouvida')
+            ? 'Em Pedrasul, Maren ergue\nescolas onde havia minas.'
+            : 'Em Pedrasul, as montanhas\nguardam rancor silencioso.',
+          gameState.getFlag('dagan_aliado')
+            ? 'Príncipe Dagan reconstrói\na Ponte de Cobre em paz.'
+            : 'Em Cobre-Alto, as ruínas\nlembram a ponte caída.',
+          gameState.getFlag('iris_perdoada')
+            ? 'Íris e Irmã Olívia cuidam\ndo novo Santuário livre.'
+            : 'Irmã Olívia guia sozinha\no Santuário renovado.',
+          gameState.getFlag('relojoeiro_resolvido')
+            ? 'E o relógio de Seu Tomé\nbate as horas de um novo\ntempo em Luminário.'
+            : 'E o carrilhão de Cobre-\nAlto permaneceu mudo no\nhorizonte do norte.',
+          'PÓS-CRÉDITOS: Na Vila\nAlvorada, Sael olha para\no Castelo ao longe.',
+          'O céu está limpo, mas\numa tênue faísca dourada\nainda brilha na torre...',
+          '[FIM - A LENDA DE\nLUMINÁRIO: A COROA VAZIA]',
+        ];
+        this.dialogueBox.start('NARRADOR', pages.join('\n---\n'));
+      }
+    );
+  }
+
+  /**
+   * Tenta interagir de frente com NPC, placa, baú, poço ou balcão de loja.
+   * Retorna true se houver interação.
+   */
+  public tryTalkToNpc(): boolean {
+    const facing = this.player.getFacingTile();
+
+    // 1. Tenta falar com NPC visível virado para o herói
+    const directNpc = this.npcs.find((n) => n.isVisible() && n.tileX === facing.x && n.tileY === facing.y);
+    if (directNpc) {
+      this.interactWithNpcEntity(directNpc);
+      return true;
+    }
+
+    // 2. Tenta ler placa de frente
+    const sign = this.currentMap.getSignAt(facing.x, facing.y);
+    if (sign) {
+      if (sign.setFlag) {
+        gameState.setFlag(sign.setFlag, true);
+      }
+      if (sign.setFlag === 'garo_carga_vista') {
+        gameState.setFlag('carga_perdida_resolvida', true);
+      }
+      if (sign.setFlag === 'diario_auren_lido' && gameState.getItemQuantity('diario_auren') === 0) {
+        gameState.addItem('diario_auren', 1);
+      }
+      this.dialogueBox.start(sign.title || 'PLACA', sign.text);
+      return true;
+    }
+
+    // 3. Tenta interagir com baú de frente
+    const chest = this.currentMap.getChestAt(facing.x, facing.y);
+    if (chest) {
+      if (gameState.openedChests.has(chest.id)) {
+        soundManager.playSfx('error');
+        this.dialogueBox.start('BAÚ', 'O baú está vazio.');
+      } else {
+        soundManager.playSfx('chest');
+        gameState.openedChests.add(chest.id);
+        this.currentMap.setTileAt(chest.tileX, chest.tileY, 'chest_open');
+
+        if (chest.gold) {
+          gameState.addGold(chest.gold);
+        }
+        if (chest.item) {
+          gameState.addItem(chest.item, 1);
+        }
+        if (chest.setFlagOnOpen) {
+          gameState.setFlag(chest.setFlagOnOpen, true);
+        } else if (chest.id === 'bau_ulan') {
+          gameState.setFlag('bau_ulan_aberto', true);
+        }
+
+        this.dialogueBox.start('BAÚ', chest.message || 'Você abriu o baú do tesouro!');
+      }
+      return true;
+    }
+
+    const facingTile = this.currentMap.getTileAt(facing.x, facing.y);
+
+    // 4. Interação com Poço de Água ('well') — Missão "O Poço de Dona Bina" em Alvorada
+    if (facingTile && facingTile.id === 'well') {
+      if (this.currentMapId === 'cidade_1') {
+        if (!gameState.getFlag('poco_bina_resolvido')) {
+          this.dialogueBox.start(
+            'POÇO DE ALVORADA',
+            'Algo viscoso se mexe no\nfundo do poço escuro!\nUma Gosma-Cinza salta!',
+            () => {
+              const gosma = getMonsterDef('gosma_cinza')!;
+              this.sceneManager.push(
+                new BattleScene(
+                  this.sceneManager,
+                  this.input,
+                  gosma,
+                  this.assetManager,
+                  () => this.handleHeroDefeat(),
+                  () => {
+                    gameState.setFlag('poco_bina_resolvido', true);
+                    gameState.addGold(30);
+                    this.dialogueBox.start(
+                      'POÇO DE ALVORADA',
+                      'A água voltou a correr\nlímpida no poço!\n---\nDona Bina agradece e lhe\nentrega 30 moedas de ouro!'
+                    );
+                  }
+                )
+              );
+            }
+          );
+        } else {
+          this.dialogueBox.start('POÇO DE ALVORADA', 'A água do poço está\nlímpida e fresca agora.');
+        }
+      } else {
+        this.dialogueBox.start('POÇO', 'Um poço de pedra antigo.\nA água corre fria lá\nno fundo.');
+      }
+      return true;
+    }
+
+    // 5. Se o tile à frente for um balcão ('counter'), tenta falar com o NPC atrás dele
+    if (facingTile && facingTile.kind === 'counter') {
+      const dx = facing.x - this.player.tileX;
+      const dy = facing.y - this.player.tileY;
+      const behindX = facing.x + dx;
+      const behindY = facing.y + dy;
+      const counterNpc = this.npcs.find((n) => n.isVisible() && n.tileX === behindX && n.tileY === behindY);
+      if (counterNpc) {
+        this.interactWithNpcEntity(counterNpc);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Abre o mapa esquemático do reino mostrando marcos geográficos e posição do herói.
+   */
+  public openWorldMap(): void {
+    soundManager.playSfx('confirm');
+    this.sceneManager.push(
+      new WorldMapScene(
+        this.sceneManager,
+        this.input,
+        this.currentMapId,
+        this.player.tileX,
+        this.player.tileY
+      )
+    );
+  }
+
+  /**
+   * Verifica se o herói já cumpriu os requisitos narrativos para entrar no mapa de destino.
+   */
+  private canEnterWarp(targetMap: string): boolean {
+    if (
+      this.currentMapId === 'castelo' &&
+      targetMap === 'overworld' &&
+      !gameState.getFlag('rei_missao_recebida')
+    ) {
+      this.player.setTilePosition(this.player.tileX, Math.max(1, this.player.tileY - 1), 'up');
+      this.dialogueBox.start(
+        'GUARDA REAL',
+        'O Rei Auren aguarda você\nno Salão do Trono ao\nnorte, [NOME]!'
+      );
+      return false;
+    }
+
+    if (
+      (targetMap === 'cidade_2' || targetMap === 'gruta_costa' || targetMap === 'santuario') &&
+      !gameState.getFlag('ato1_concluido')
+    ) {
+      this.dialogueBox.start(
+        'GUARDA DA FRONTEIRA',
+        'Conclua primeiro a missão\ndo Rei em Alvorada e na\nCaverna das Sombras!'
+      );
+      return false;
+    }
+
+    if (
+      (targetMap === 'vau_cinza' ||
+        targetMap === 'cabana_orun' ||
+        targetMap === 'rochedo' ||
+        targetMap === 'mina_velha') &&
+      !gameState.getFlag('ato2_concluido')
+    ) {
+      this.dialogueBox.start(
+        'GUARDA DA FRONTEIRA',
+        'As fronteiras do norte e\ndo pântano estão fechadas.\nFale com o Rei Auren!'
+      );
+      return false;
+    }
+
+    if (targetMap === 'cobre_alto' && !gameState.getFlag('chave_cobre_recebida')) {
+      this.dialogueBox.start(
+        'PORTÃO DE COBRE-ALTO',
+        'O portão de Cobre-Alto\nestá trancado! Você precisa\nda Chave de Cobre do Rei.'
+      );
+      return false;
+    }
+
+    if (targetMap === 'refugio_raizes' && !gameState.getFlag('refugio_aberto')) {
+      this.dialogueBox.start(
+        'FLORESTA DENSA',
+        'As raízes antigas fecham\na passagem secreta da\nfloresta.'
+      );
+      return false;
+    }
+
+    if (targetMap === 'cripta_refino' && !gameState.getFlag('pedra_eco_obtida')) {
+      this.dialogueBox.start(
+        'ALTAR DO SANTUÁRIO',
+        'O altar está selado!\nVocê precisa da Pedra do\nEco do Refúgio das Raízes.'
+      );
+      return false;
+    }
+
+    if (targetMap === 'templo_coracao' && !gameState.getFlag('ilha_acessivel')) {
+      this.dialogueBox.start(
+        'COSTA DO SOL',
+        'O mar revolto impede a\ntravessia até a Ilha Veyra.'
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  private triggerWarp(warp: PendingWarp, isDoor = false): void {
+    if (!this.canEnterWarp(warp.targetMap)) {
+      soundManager.playSfx('error');
+      return;
+    }
+    soundManager.playSfx(isDoor ? 'door' : 'stairs');
+    this.warpState = 'fade_out';
+    this.warpProgress = 0;
+    this.pendingWarp = warp;
+  }
+
+  private handleHeroDefeat(): void {
+    // Respawn do herói diante do trono do Rei Auren no Castelo Real
+    this.loadMap('castelo', 18, 6, 'up');
+  }
+
+  public update(): void {
+    // Garante que a música do mapa esteja ativa ao retornar de batalhas ou cenas sobrepostas
+    const currentBgm = soundManager.getCurrentBgm();
+    if (!currentBgm || currentBgm === 'battle' || currentBgm === 'boss') {
+      this.syncMapBgm();
+    }
+
+    // 1. Processa animação de transição entre mapas (Warp Fade)
+    if (this.warpState === 'fade_out') {
+      this.warpProgress += 1 / CONFIG.ui.fadeFrames;
+      if (this.warpProgress >= 1) {
+        this.warpProgress = 1;
+        if (this.pendingWarp) {
+          this.loadMap(
+            this.pendingWarp.targetMap,
+            this.pendingWarp.targetX,
+            this.pendingWarp.targetY,
+            this.pendingWarp.targetDir,
+            this.pendingWarp.targetWarp
+          );
+          this.pendingWarp = null;
+        }
+        this.warpState = 'fade_in';
+      }
+      return;
+    }
+
+    if (this.warpState === 'fade_in') {
+      this.warpProgress -= 1 / CONFIG.ui.fadeFrames;
+      if (this.warpProgress <= 0) {
+        this.warpProgress = 0;
+        this.warpState = 'none';
+      }
+      return;
+    }
+
+    // 2. Alterna overlay de debug com F2
+    if (this.input.wasPressed('debug')) {
+      this.showDebug = !this.showDebug;
+    }
+
+    // 3. Se houver caixa de diálogo ativa, ela recebe o input
+    if (this.dialogueBox.isOpen()) {
+      this.dialogueBox.update(this.input);
+      return;
+    }
+
+    // 4. Interação quando parado: Falar com NPC/Placa/Baú ou Abrir Menu
+    if (!this.player.isMoving && this.input.wasPressed('confirm')) {
+      const talked = this.tryTalkToNpc();
+      if (!talked) {
+        // Se não houver entidade na frente, abre a janela de comandos
+        this.sceneManager.push(
+          new MenuScene(
+            this.sceneManager,
+            this.input,
+            () => this.tryTalkToNpc(),
+            () => this.openWorldMap()
+          )
+        );
+      }
+      return;
+    }
+
+    // Atalho direto para abrir mapa do reino com a tecla M
+    if (!this.player.isMoving && this.input.wasPressed('map')) {
+      this.openWorldMap();
+      return;
+    }
+
+    // 5. Atualiza o jogador no grid com checagem de colisão (mapa + NPCs visíveis)
+    const visibleNpcs = this.npcs.filter((n) => n.isVisible());
+    this.player.update(this.input, this.currentMap, visibleNpcs);
+    this.currentMap.update();
+
+    // 6. Câmera segue o herói suavemente travada nas bordas
+    this.camera.follow(this.player.pixelX, this.player.pixelY);
+
+    // 7. Checa se o herói terminou um passo sobre um ponto de Warp ou Porta
+    if (this.player.consumeStepFinished() && this.warpState === 'none') {
+      gameState.updateLocation(
+        this.currentMapId,
+        this.player.tileX,
+        this.player.tileY,
+        this.player.direction
+      );
+
+      const currentTile = this.currentMap.getTileAt(this.player.tileX, this.player.tileY);
+      const isDoorTile =
+        currentTile?.kind === 'door' ||
+        currentTile?.id === 'castle_gate' ||
+        this.currentMap.mapType === 'interior';
+
+      const warp = this.currentMap.getWarpAt(this.player.tileX, this.player.tileY);
+      if (warp) {
+        const isStairs = warp.trigger === 'stairs';
+        if (!isStairs || CONFIG.map.stairsMode === 'auto') {
+          this.triggerWarp(
+            {
+              targetMap: warp.targetMap,
+              targetWarp: warp.targetWarp,
+              targetX: warp.targetX,
+              targetY: warp.targetY,
+              targetDir: warp.arriveDir,
+            },
+            isDoorTile && !isStairs
+          );
+          return;
+        }
+      } else if (currentTile?.kind === 'door') {
+        // Som ao atravessar portas e portões internos (ex: salões do Castelo Real)
+        soundManager.playSfx('door');
+      }
+
+      // Saída pela borda do mapa (em cidades e castelos)
+      if (this.currentMap.exitOnEdge) {
+        const atEdge =
+          this.player.tileX <= 0 ||
+          this.player.tileX >= this.currentMap.width - 1 ||
+          this.player.tileY <= 0 ||
+          this.player.tileY >= this.currentMap.height - 1;
+
+        if (atEdge && this.currentMap.edgeExit) {
+          const edgeWarp = this.currentMap.getWarpByName(this.currentMap.edgeExit);
+          if (edgeWarp) {
+            this.triggerWarp(
+              {
+                targetMap: edgeWarp.targetMap,
+                targetWarp: edgeWarp.targetWarp,
+                targetX: edgeWarp.targetX,
+                targetY: edgeWarp.targetY,
+                targetDir: edgeWarp.arriveDir,
+              },
+              this.currentMap.mapType === 'interior'
+            );
+            return;
+          }
+        }
+      }
+
+      // 7.1 Checa encontro aleatório de batalha apenas em mapas perigosos (overworld, cavernas)
+      if (!this.currentMap.isSafe) {
+        if (currentTile && currentTile.encounterRate > 0) {
+          if (Math.random() < currentTile.encounterRate) {
+            const monster = rollEncounterForTerrain(
+              currentTile.id,
+              this.currentMapId === 'overworld' ? this.player.tileX : undefined,
+              this.currentMapId === 'overworld' ? this.player.tileY : undefined
+            );
+            if (monster) {
+              this.sceneManager.push(
+                new BattleScene(
+                  this.sceneManager,
+                  this.input,
+                  monster,
+                  this.assetManager,
+                  () => this.handleHeroDefeat()
+                )
+              );
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // 8. Temporizador do banner
+    if (this.locationBannerTimer > 0) {
+      this.locationBannerTimer--;
+    }
+  }
+
+  public render(renderer: Renderer): void {
+    // 1. Limpa tela com fundo preto (interiores menores ficam centralizados com fundo preto)
+    renderer.clear(NES_COLORS.BLACK);
+
+    // 2. Renderiza tiles visíveis do mapa
+    this.currentMap.render(renderer, this.camera, this.assetManager);
+
+    // 3. Renderiza NPCs
+    for (const npc of this.npcs) {
+      npc.render(renderer, this.camera, this.assetManager);
+    }
+
+    // 4. Renderiza o herói
+    this.player.render(renderer, this.camera, this.assetManager);
+
+    // 5. Banner de localização (exibido na entrada de cada mapa)
+    if (this.locationBannerTimer > 0) {
+      const bannerW = 160;
+      const bannerH = 24;
+      const bannerX = Math.floor((CONFIG.screen.width - bannerW) / 2);
+      const bannerY = 8;
+
+      renderer.drawWindow(bannerX, bannerY, bannerW, bannerH, NES_COLORS.BLACK);
+      const textW = renderer.measureText(this.locationBannerTitle);
+      const textX = bannerX + Math.floor((bannerW - textW) / 2);
+      renderer.drawText(this.locationBannerTitle, textX, bannerY + 8, {
+        color: NES_COLORS.GOLD,
+      });
+    }
+
+    // 6. Dica discreta de controles no rodapé (apenas se diálogo fechado)
+    if (!this.dialogueBox.isOpen()) {
+      const hintText = '[ENTER] COMANDOS  [M] MAPA';
+      renderer.drawText(hintText, 6, CONFIG.screen.height - 12, {
+        color: NES_COLORS.WHITE,
+      });
+    }
+
+    // 7. Caixa de diálogo clássica (letra por letra com indicador piscante)
+    if (this.dialogueBox.isOpen()) {
+      this.dialogueBox.render(renderer);
+    }
+
+    // 8. Transição de Warp em fade
+    if (this.warpState !== 'none') {
+      renderer.drawFade(this.warpProgress);
+    }
+
+    // 9. Overlay de depuração (F2)
+    if (this.showDebug) {
+      this.renderDebugOverlay(renderer);
+    }
+  }
+
+  private renderDebugOverlay(renderer: Renderer): void {
+    const dbgX = 6;
+    const dbgY = 6;
+    const dbgW = 150;
+    const dbgH = 74;
+
+    renderer.drawWindow(dbgX, dbgY, dbgW, dbgH, NES_COLORS.BLACK);
+
+    const currentTile = this.currentMap.getTileAt(this.player.tileX, this.player.tileY);
+    const tileName = currentTile ? currentTile.name : 'Vazio';
+
+    renderer.drawText(`DEBUG (F2)`, dbgX + 6, dbgY + 6, { color: NES_COLORS.GOLD });
+    renderer.drawText(`Mapa: ${this.currentMapId}`, dbgX + 6, dbgY + 18, {
+      color: NES_COLORS.WHITE,
+    });
+    renderer.drawText(`Grid: X:${this.player.tileX} Y:${this.player.tileY}`, dbgX + 6, dbgY + 30, {
+      color: NES_COLORS.WHITE,
+    });
+    renderer.drawText(`Tile: ${tileName}`, dbgX + 6, dbgY + 42, {
+      color: NES_COLORS.LIGHT_BLUE,
+    });
+    renderer.drawText(`NPCs: ${this.npcs.length}`, dbgX + 6, dbgY + 54, {
+      color: NES_COLORS.PALE_GREEN,
+    });
+  }
+
+  public triggerBattle(monsterId = 'gosma_cinza'): void {
+    const monster = getMonsterDef(monsterId) || getMonsterDef('gosma_cinza')!;
+    this.sceneManager.push(
+      new BattleScene(
+        this.sceneManager,
+        this.input,
+        monster,
+        this.assetManager,
+        () => this.handleHeroDefeat()
+      )
+    );
+  }
+}

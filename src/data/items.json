@@ -1,0 +1,298 @@
+[
+  {
+    "id": "erva_cura",
+    "name": "Erva de Cura",
+    "type": "consumable",
+    "price": 10,
+    "healHp": 25,
+    "description": "Folhas medicinais do sul.\nRecupera 25 PV."
+  },
+  {
+    "id": "tonico_brasa",
+    "name": "Tônico de Brasa",
+    "type": "consumable",
+    "price": 35,
+    "healHp": 60,
+    "description": "Extrato quente do bosque.\nRecupera 60 PV."
+  },
+  {
+    "id": "agua_lume",
+    "name": "Água de Lume",
+    "type": "consumable",
+    "price": 40,
+    "healMp": 15,
+    "description": "Água pura do santuário.\nRecupera 15 PM."
+  },
+  {
+    "id": "tocha",
+    "name": "Tocha",
+    "type": "consumable",
+    "price": 8,
+    "description": "Tocha resinada que ilumina\ngalerias subterrâneas."
+  },
+  {
+    "id": "asa_retorno",
+    "name": "Asa de Retorno",
+    "type": "consumable",
+    "price": 25,
+    "description": "Pluma encantada que guia o\nviajante até a capital."
+  },
+  {
+    "id": "espada_carvalho",
+    "name": "Espada Carvalho",
+    "type": "weapon",
+    "price": 20,
+    "atkBonus": 4,
+    "description": "Lâmina de treino em madeira\nendurecida. (ATQ +4)"
+  },
+  {
+    "id": "adaga_cobre",
+    "name": "Adaga de Cobre",
+    "type": "weapon",
+    "price": 55,
+    "atkBonus": 9,
+    "description": "Adaga leve forjada em cobre\ndas colinas. (ATQ +9)"
+  },
+  {
+    "id": "espada_ferro",
+    "name": "Espada de Ferro",
+    "type": "weapon",
+    "price": 140,
+    "atkBonus": 16,
+    "description": "Espada padrão da guarda\nde Luminário. (ATQ +16)"
+  },
+  {
+    "id": "lamina_fronteira",
+    "name": "Lâmina Fronteira",
+    "type": "weapon",
+    "price": 320,
+    "atkBonus": 25,
+    "description": "Aço temperado nas Minas do\nNorte. (ATQ +25)"
+  },
+  {
+    "id": "tunica_viajante",
+    "name": "Túnica Viajante",
+    "type": "armor",
+    "price": 18,
+    "defBonus": 3,
+    "description": "Veste reforçada para longas\njornadas. (DEF +3)"
+  },
+  {
+    "id": "couraca_couro",
+    "name": "Couraça de Couro",
+    "type": "armor",
+    "price": 65,
+    "defBonus": 8,
+    "description": "Peitoral de couro curtido\ncontra golpes. (DEF +8)"
+  },
+  {
+    "id": "cota_malha",
+    "name": "Cota de Malha",
+    "type": "armor",
+    "price": 180,
+    "defBonus": 15,
+    "description": "Anéis de ferro forjados\nna capital. (DEF +15)"
+  },
+  {
+    "id": "escudo_madeira",
+    "name": "Escudo Madeira",
+    "type": "shield",
+    "price": 35,
+    "defBonus": 4,
+    "description": "Escudo redondo de carvalho\ncom aro firme. (DEF +4)"
+  },
+  {
+    "id": "escudo_ferro",
+    "name": "Escudo de Ferro",
+    "type": "shield",
+    "price": 110,
+    "defBonus": 9,
+    "description": "Escudo pesado com o brasão\nda Coroa. (DEF +9)"
+  },
+  {
+    "id": "medalhao_real",
+    "name": "Medalhão Real",
+    "type": "accessory",
+    "price": 0,
+    "defBonus": 2,
+    "unsellable": true,
+    "description": "Medalhão dado por Auren.\nA pedra pulsa levemente."
+  },
+  {
+    "id": "diario_ulan",
+    "name": "Diário de Ulan",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Relato achado na caverna:\n'Guardo a porta por Aneth.'"
+  },
+  {
+    "id": "carta_vael",
+    "name": "Carta de Vael",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Ordem com o selo de Vael\nsobre o poço da mina."
+  },
+  {
+    "id": "pulseira_antiga",
+    "name": "Pulseira Antiga",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Pulseira de bronze com o\nmesmo símbolo do Medalhão."
+  },
+  {
+    "id": "selo_real",
+    "name": "Selo Real",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Selo oficial de Auren.\nAutoriza passagem ao sul."
+  },
+  {
+    "id": "elixir_lume",
+    "name": "Elixir de Lume",
+    "type": "consumable",
+    "price": 90,
+    "healHp": 120,
+    "healMp": 25,
+    "description": "Elixir dourado concentrado.\nRestaura 120 PV e 25 PM."
+  },
+  {
+    "id": "sabre_marinho",
+    "name": "Sabre Marinho",
+    "type": "weapon",
+    "price": 220,
+    "atkBonus": 21,
+    "description": "Lâmina curva dos marujos\ndo Porto do Sol. (ATQ +21)"
+  },
+  {
+    "id": "machado_pedrasul",
+    "name": "Machado Pedrasul",
+    "type": "weapon",
+    "price": 480,
+    "atkBonus": 34,
+    "description": "Machado pesado de rocha e\naço do norte. (ATQ +34)"
+  },
+  {
+    "id": "espada_cobreval",
+    "name": "Espada Cobreval",
+    "type": "weapon",
+    "price": 750,
+    "atkBonus": 45,
+    "description": "Lâmina real temperada nas\nforjas de Daros. (ATQ +45)"
+  },
+  {
+    "id": "lamina_veyra",
+    "name": "Lâmina de Veyra",
+    "type": "weapon",
+    "price": 1200,
+    "atkBonus": 60,
+    "description": "Espada ancestral que vibra\ncom o Eco puro. (ATQ +60)"
+  },
+  {
+    "id": "armadura_bronze",
+    "name": "Armadura Bronze",
+    "type": "armor",
+    "price": 300,
+    "defBonus": 22,
+    "description": "Placas de bronze batido\nde Cobreval. (DEF +22)"
+  },
+  {
+    "id": "cota_pedrasul",
+    "name": "Cota de Pedrasul",
+    "type": "armor",
+    "price": 560,
+    "defBonus": 32,
+    "description": "Malha reforçada contra o\nfrio das minas. (DEF +32)"
+  },
+  {
+    "id": "manto_raizes",
+    "name": "Manto das Raízes",
+    "type": "armor",
+    "price": 920,
+    "defBonus": 44,
+    "description": "Veste tecida no Refúgio\nque repele o lume. (DEF +44)"
+  },
+  {
+    "id": "escudo_cobre",
+    "name": "Escudo de Cobre",
+    "type": "shield",
+    "price": 240,
+    "defBonus": 15,
+    "description": "Escudo forjado nas oficinas\nde Cobre-Alto. (DEF +15)"
+  },
+  {
+    "id": "escudo_veyra",
+    "name": "Escudo de Veyra",
+    "type": "shield",
+    "price": 680,
+    "defBonus": 26,
+    "description": "Escudo rúnico dos antigos\nguardiões. (DEF +26)"
+  },
+  {
+    "id": "chave_cobre",
+    "name": "Chave de Cobre",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Chave real de Cobre-Alto.\nAbre o portão interno."
+  },
+  {
+    "id": "pedra_eco",
+    "name": "Pedra do Eco",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Cristal ancestral Veyra.\nPermite entoar o Eco."
+  },
+  {
+    "id": "lente_olivia",
+    "name": "Lente de Olívia",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Cristal bento do templo.\nRevela quem o lume tocou."
+  },
+  {
+    "id": "selo_veyra",
+    "name": "Selo de Veyra",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Relíquia do Templo-Coração.\nContém a veia do lume."
+  },
+  {
+    "id": "ervas_brejo",
+    "name": "Ervas do Brejo",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Raízes de Brumaterra que\naliviam a febre cinzenta."
+  },
+  {
+    "id": "pao_pedra",
+    "name": "Pão de Pedra",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Ração densa de Pedrasul\npara os mineiros famintos."
+  },
+  {
+    "id": "peca_relogio",
+    "name": "Engrenagem Fina",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Peça de bronze calibrada\npara o relógio de Tomé."
+  },
+  {
+    "id": "diario_auren",
+    "name": "Diário de Auren",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Confissão escrita pelo Rei\nna Câmara do Lume."
+  }
+]
