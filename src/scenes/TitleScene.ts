@@ -158,6 +158,10 @@ export class TitleScene implements Scene {
         textColor = NES_COLORS.DARK_GRAY;
       }
       renderer.drawText(this.options[i], 98, optY, { color: textColor });
+
+      if (i === 1 && hasSave && gameState.isGameCompleted()) {
+        renderer.drawText('★', 174, optY, { color: NES_COLORS.GOLD });
+      }
     }
 
     // 5. Prompt inferior piscante "PRESSIONE ENTER"

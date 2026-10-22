@@ -15,6 +15,7 @@ import { BattleScene } from './BattleScene';
 import { WorldMapScene } from './WorldMapScene';
 import { ShopScene } from './ShopScene';
 import { InnScene } from './InnScene';
+import { CreditsScene } from './CreditsScene';
 import { Direction } from '../assets/heroGraphics';
 import { MAP_REGISTRY } from '../data/maps';
 import { gameState } from '../state/GameState';
@@ -1027,7 +1028,17 @@ export class MapScene implements Scene {
           'O céu está limpo, mas\numa tênue faísca dourada\nainda brilha na torre...',
           '[FIM - A LENDA DE\nLUMINÁRIO: A COROA VAZIA]',
         ];
-        this.dialogueBox.start('NARRADOR', pages.join('\n---\n'));
+        this.dialogueBox.start('NARRADOR', pages.join('\n---\n'), () => {
+          gameState.setFlag('jogo_concluido', true);
+          gameState.saveGame(
+            this.currentMapId,
+            this.player.tileX,
+            this.player.tileY,
+            this.player.direction
+          );
+          const credits = new CreditsScene(this.sceneManager, this.input, this.assetManager);
+          this.sceneManager.fadeTransition(credits);
+        });
       }
     );
   }

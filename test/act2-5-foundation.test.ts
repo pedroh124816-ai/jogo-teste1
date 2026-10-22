@@ -3,6 +3,7 @@ import { MAP_REGISTRY } from '../src/data/maps';
 import { getItemDef, SHOP_CATALOGS } from '../src/data/items';
 import { getMonsterDef, getSpellDef, rollEncounterForTerrain } from '../src/data/monsters';
 import { DialogueBox } from '../src/engine/DialogueBox';
+import { CreditsScene } from '../src/scenes/CreditsScene';
 import { soundManager } from '../src/engine/AudioManager';
 import { TiledMap } from '../src/engine/TiledMap';
 import { gameState } from '../src/state/GameState';
@@ -418,6 +419,22 @@ describe('Etapa 9 - Sistema de Audio 8-Bit (BGM e SFX estilo Square Enix NES)', 
 
     soundManager.stopBgm();
     expect(soundManager.getCurrentBgm()).toBeNull();
+  });
+});
+
+describe('Etapa 10 - Encerramento Formal, CreditsScene e Marcador de Jogo Concluido', () => {
+  it('instancia a CreditsScene e registra o estado de jogo concluido com estrela', () => {
+    gameState.reset();
+    expect(gameState.isGameCompleted()).toBe(false);
+
+    gameState.setFlag('final_b_coroa_vazia', true);
+    gameState.setFlag('jogo_concluido', true);
+    expect(gameState.isGameCompleted()).toBe(true);
+
+    const dummySceneManager = { fadeTransition: () => {}, push: () => {}, pop: () => {} } as any;
+    const dummyInput = { isDown: () => false, wasPressed: () => false } as any;
+    const credits = new CreditsScene(dummySceneManager, dummyInput);
+    expect(credits.name).toBe('CreditsScene');
   });
 });
 

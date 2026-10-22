@@ -493,6 +493,26 @@ export class GameState {
     return Boolean(GameState.memorySaveFallback);
   }
 
+  public isGameCompleted(): boolean {
+    if (this.flags.get('jogo_concluido') || this.flags.get('final_b_coroa_vazia')) return true;
+    try {
+      let raw: string | null = GameState.memorySaveFallback;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const fromStorage = window.localStorage.getItem(GameState.SAVE_KEY);
+        if (fromStorage) raw = fromStorage;
+      }
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data?.flags?.flags?.jogo_concluido || data?.flags?.flags?.final_b_coroa_vazia) {
+          return true;
+        }
+      }
+    } catch {
+      // ignora
+    }
+    return false;
+  }
+
   public loadGame(): boolean {
     let raw: string | null = GameState.memorySaveFallback;
     try {

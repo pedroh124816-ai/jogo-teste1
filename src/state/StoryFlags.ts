@@ -76,6 +76,7 @@ export type BooleanFlagKey =
   | 'castelo_invadido'
   | 'auren_derrotado'
   | 'final_b_coroa_vazia'
+  | 'jogo_concluido'
   | 'sonho_5_visto';
 
 const DUVIDA_FLAG_KEYS: readonly BooleanFlagKey[] = [

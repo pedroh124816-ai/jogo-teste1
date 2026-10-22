@@ -93,7 +93,7 @@ jogo/
 
 ## 6. Problemas Conhecidos (Pendentes de Correção no Código)
 
-1. **Persistência e Áudio pendentes**: Sem save/load em `localStorage`; sem motor de áudio chiptune.
+1. **Nenhum bloqueio técnico crítico no momento**: Motor, persistência, áudio e encerramento operando normalmente com 100% dos testes verdes.
 
 ---
 
@@ -138,6 +138,11 @@ jogo/
    - 8 trilhas musicais (`BGM`) em loop contínuo: `title` (Prelúdio de Luminário em arpejos estilo Cristal), `overworld` (Marcha de Luminário), `castle` (Corte de Luminário), `town` (Brisa da Vila), `cave` (Ecos da Sombra), `shrine` (Santuário e Lenda), `battle` (Lâmina em Guarda) e `boss` (Fúria da Sombra).
    - 17 efeitos sonoros (`SFX`) e fanfarras clássicas integrados a todas as cenas: `level_up` (fanfarra ao subir de nível), `victory` (fanfarra ao vencer batalhas), `defeat` (jingle fúnebre ao ser derrotado), `chest` (fanfarra ao abrir um baú), `inn` (acalanto ao dormir na estalagem), `encounter`, `attack`, `crit`, `hit`, `magic`, `heal`, `coins`, `stairs`, `cursor`, `confirm`, `cancel` e `error`.
 
+10. **Encerramento Formal e Tela de Créditos (`CreditsScene`)** — ✅ **Concluída**
+    - Criação da cena de créditos em 8-bit (`CreditsScene.ts`) com rolagem suave, estética NES e tema solene de encerramento.
+    - Tela final fixa de "FIM / A COROA VAZIA" com retorno automático para a Tela de Título (`TitleScene.ts`).
+    - Salva o jogo com a flag `jogo_concluido` e exibe o símbolo dourado de conclusão `★` no menu `CONTINUAR`.
+
 ---
 
 ## 8. Estado Atual das Funcionalidades
@@ -158,6 +163,7 @@ jogo/
 - [x] Campanha completa dos Atos 2 a 5 e Final B ("A Coroa Vazia") com epílogo reativo (Etapa 7).
 - [x] Cutscene de abertura em 8-bit (`IntroScene.ts`), início guiado no Salão do Trono do Rei Auren, sistema de Save/Load (`localStorage`) e progressão geográfica guiada por montanhas cinzas e rios (Etapa 8).
 - [x] Sintetizador de áudio 8-bit chiptune (`AudioManager.ts`) com 8 trilhas musicais estilo Square Enix NES e 17 efeitos sonoros/fanfarras (Etapa 9).
+- [x] Encerramento formal, CreditsScene com rolagem e retorno ao título com estrela dourada `★` de jogo concluído (Etapa 10).
 
 
 
