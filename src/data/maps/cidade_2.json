@@ -1079,6 +1079,63 @@
               "value": "Sou o Tião, barqueiro do\ncais. Conheço cada recife\ndeste mar!"
             }
           ]
+        },
+        {
+          "id": 16,
+          "name": "Zéfiro, o Inventor",
+          "type": "npc",
+          "x": 144,
+          "y": 208,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_elder"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "showIfFlag",
+              "type": "string",
+              "value": "ato2_concluido"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Sou Zéfiro! Sonho em voar\nsobre as montanhas num\nbalão de seda e vapor!"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "name": "vapor_mare",
+          "type": "sign",
+          "x": 240,
+          "y": 288,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "VAPOR DA MARÉ"
+            },
+            {
+              "name": "setFlag",
+              "type": "string",
+              "value": "vapor_coletado"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "A maré noturna solta um\nvapor luminoso no cais!\n---\nVocê enche o frasco com o\nVapor da Maré."
+            }
+          ]
         }
       ]
     }

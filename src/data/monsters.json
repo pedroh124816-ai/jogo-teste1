@@ -40,8 +40,8 @@
     "gold": 9,
     "spriteId": "corvo_manchado",
     "canFlee": true,
-    "dropItemId": "tocha",
-    "dropChance": 0.1,
+    "dropItemId": "pena_vento",
+    "dropChance": 0.3,
     "description": "Pássaro carniceiro de bico\nforte e plumagem cinzenta."
   },
   {

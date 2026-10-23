@@ -151,6 +151,22 @@
     "description": "Selo oficial de Auren.\nAutoriza passagem ao sul."
   },
   {
+    "id": "pena_vento",
+    "name": "Pena de Vento",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Pena leve de corvo. Zéfiro\nusa na vela do balão."
+  },
+  {
+    "id": "frasco_vapor",
+    "name": "Frasco de Vapor",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Vapor luminoso da maré\nnoturna. Infla o balão."
+  },
+  {
     "id": "elixir_lume",
     "name": "Elixir de Lume",
     "type": "consumable",

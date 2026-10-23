@@ -99,6 +99,11 @@ export class GameState {
   public savedDir: 'up' | 'down' | 'left' | 'right' = 'up';
   public timeOfDay: 'day' | 'night' = 'day';
 
+  /** Meio de transporte atual no mapa-múndi e posição dos veículos estacionados. */
+  public transport: 'foot' | 'boat' | 'balloon' = 'foot';
+  public boatPos: { x: number; y: number } | null = null;
+  public balloonPos: { x: number; y: number } | null = null;
+
   public respawnMapId = 'castelo';
   public respawnTileX = 18;
   public respawnTileY = 6;
@@ -170,7 +175,9 @@ export class GameState {
     this.openedChests.clear();
     this.flags.reset();
     this.spells = [];
-
+    this.transport = 'foot';
+    this.boatPos = null;
+    this.balloonPos = null;
     this.savedMapId = 'castelo';
     this.savedTileX = 18;
     this.savedTileY = 6;
@@ -545,6 +552,9 @@ export class GameState {
       savedTileY: this.savedTileY,
       savedDir: this.savedDir,
       timeOfDay: this.timeOfDay,
+      transport: this.transport,
+      boatPos: this.boatPos,
+      balloonPos: this.balloonPos,
       respawnMapId: this.respawnMapId,
       respawnTileX: this.respawnTileX,
       respawnTileY: this.respawnTileY,
@@ -660,6 +670,15 @@ export class GameState {
       if (data.timeOfDay === 'day' || data.timeOfDay === 'night') {
         this.timeOfDay = data.timeOfDay;
       }
+      if (data.transport === 'boat' || data.transport === 'balloon' || data.transport === 'foot') {
+        this.transport = data.transport;
+      }
+      const readPos = (p: unknown): { x: number; y: number } | null =>
+        p && typeof (p as { x: unknown }).x === 'number' && typeof (p as { y: unknown }).y === 'number'
+          ? { x: (p as { x: number }).x, y: (p as { y: number }).y }
+          : null;
+      this.boatPos = readPos(data.boatPos);
+      this.balloonPos = readPos(data.balloonPos);
       if (typeof data.respawnMapId === 'string') this.respawnMapId = data.respawnMapId;
       if (typeof data.respawnTileX === 'number') this.respawnTileX = data.respawnTileX;
       if (typeof data.respawnTileY === 'number') this.respawnTileY = data.respawnTileY;

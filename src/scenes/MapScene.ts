@@ -4,7 +4,8 @@ import { Input } from '../engine/Input';
 import { SceneManager } from '../engine/SceneManager';
 import { Camera } from '../engine/Camera';
 import { TiledMap } from '../engine/TiledMap';
-import { Player } from '../entities/Player';
+import { Player, ISolidMap } from '../entities/Player';
+import { getVehicleSprite } from '../assets/vehicleGraphics';
 import { NPC } from '../entities/NPC';
 import { DialogueBox } from '../engine/DialogueBox';
 import { AssetManager } from '../assets/AssetManager';
@@ -53,6 +54,11 @@ export class MapScene implements Scene {
   private warpState: WarpState = 'none';
   private warpProgress = 0;
   private quakeTimer = 0;
+
+  /** Colisão consciente do meio de transporte (a pé, de barco ou de balão). */
+  private readonly transportSolidMap: ISolidMap = {
+    isSolid: (x: number, y: number) => this.isSolidForTransport(x, y),
+  };
   private pendingWarp: PendingWarp | null = null;
 
   private showDebug: boolean = CONFIG.debug.overlayOnStart;
@@ -178,12 +184,13 @@ export class MapScene implements Scene {
         this.currentMap.setTileAt(27, 56, 'high_mountain');
       }
 
-      // Ato 5: Recife submerso para a Ilha Veyra (64, 102..104) só abre após derrotar Lorde Vael
-      if (!gameState.getFlag('ilha_acessivel')) {
-        this.currentMap.setTileAt(64, 102, 'water');
-        this.currentMap.setTileAt(64, 103, 'water');
-        this.currentMap.setTileAt(64, 104, 'water');
-      }
+      // Ato 5: o mar ao redor da Ilha Veyra só é atravessável de barco (recife submerso permanece fechado)
+      this.currentMap.setTileAt(64, 102, 'water');
+      this.currentMap.setTileAt(64, 103, 'water');
+      this.currentMap.setTileAt(64, 104, 'water');
+    }
+    if (mapId !== 'overworld') {
+      gameState.transport = 'foot';
     }
 
     // Se foi especificado um warp de destino por id/nome, posiciona exatamente nele
@@ -337,6 +344,76 @@ export class MapScene implements Scene {
           }
         }
       );
+      return;
+    }
+
+    // 0.95 Cadeia secundária do Balão: Zéfiro, o Inventor (Porto do Sol)
+    if (npc.name === 'Zéfiro, o Inventor') {
+      const say = (text: string, after?: () => void) =>
+        this.dialogueBox.start(npc.name, text, () => {
+          npc.resetDirection();
+          if (after) after();
+        });
+
+      if (gameState.getFlag('balao_obtido')) {
+        say('O balão está ancorado a\nleste do cais. Pise nele e\nvoe sobre as montanhas!\n---\nPouse com Z em terreno\nlivre. Boa viagem, [NOME]!');
+        return;
+      }
+
+      if (!gameState.getFlag('balao_missao_pena')) {
+        say(
+          'Sou Zéfiro! Sonho em voar\nsobre as montanhas num\nbalão de seda e vapor.\n---\nPreciso de 3 Penas de\nVento para a vela. Os\ncorvos manchados as soltam!',
+          () => gameState.setFlag('balao_missao_pena', true)
+        );
+        return;
+      }
+
+      if (!gameState.getFlag('balao_pena_ok')) {
+        if (gameState.getItemQuantity('pena_vento') >= 3) {
+          say(
+            'Que penas leves! Perfeito.\n---\nAgora o vapor: só à NOITE\na maré solta um brilho no\nfim do cais ao sul.\n---\nEnche este frasco lá e\ntraga-o de volta!',
+            () => {
+              gameState.removeItem('pena_vento', 3);
+              gameState.setFlag('balao_pena_ok', true);
+              gameState.setFlag('balao_missao_vapor', true);
+              soundManager.playSfx('confirm');
+            }
+          );
+        } else {
+          say('Ainda faltam Penas de Vento.\nPreciso de 3, [NOME]. Os\ncorvos manchados as soltam!');
+        }
+        return;
+      }
+
+      if (!gameState.getFlag('balao_vapor_ok')) {
+        if (gameState.getItemQuantity('frasco_vapor') > 0) {
+          say(
+            'O Vapor da Maré! Ele vai\ninflar o balão.\n---\nFalta o cobre das engrenagens:\nme traga 150 moedas de ouro\ne o balão será seu!',
+            () => {
+              gameState.removeItem('frasco_vapor', 1);
+              gameState.setFlag('balao_vapor_ok', true);
+              soundManager.playSfx('confirm');
+            }
+          );
+        } else {
+          say('O vapor só sobe à NOITE,\nno fim do cais ao sul.\nDescanse na Estalagem e\nespere a maré, [NOME]!');
+        }
+        return;
+      }
+
+      if (gameState.gold >= 150) {
+        say(
+          'Cobre suficiente! Tudo\npronto!\n---\nO balão está ancorado a\nleste do cais. Pise nele,\ne pouse com Z em terreno\nlivre, [NOME]!',
+          () => {
+            gameState.spendGold(150);
+            gameState.setFlag('balao_obtido', true);
+            gameState.balloonPos = { x: 47, y: 94 };
+            soundManager.playSfx('victory');
+          }
+        );
+      } else {
+        say('Faltam moedas para o cobre\nda engrenagem: 150 de ouro,\n[NOME]. Volte quando tiver!');
+      }
       return;
     }
 
@@ -878,20 +955,34 @@ export class MapScene implements Scene {
       return;
     }
 
-    // 1.7 Ato 5: Travessia para Ilha Veyra, Templo do Coração e Confronto Final na Câmara do Lume
+    // 1.7 Ato 5: Travessia para Ilha Veyra de BARCO, Templo do Coração e Confronto Final na Câmara do Lume
     if (
       (npc.name === 'Almirante Brasca' || npc.name === 'Marinheiro') &&
       this.currentMapId === 'cidade_2' &&
       gameState.getFlag('ato4_concluido')
     ) {
+      if (gameState.getFlag('barco_obtido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'O barco espera no cais ao\nsul da cidade, [NOME].\n---\nO Templo do Coração fica\ncercado de montanhas. Fale\ncom Zéfiro, o inventor!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
       const msg =
         npc.name === 'Almirante Brasca'
-          ? 'Meu navio abriu passagem\npelo recife! Siga ao sul\naté a Ilha Veyra, [NOME]!'
-          : 'O caminho pelo recife ao\nsul está aberto! Rumo à\nIlha Veyra, [NOME]!';
+          ? 'Meu barco é seu, [NOME]!\nEstá ancorado logo ao sul\ndo cais. Rumo a Veyra!\n---\nMas ouça: o templo fica\ncercado de montanhas. Procure\nZéfiro, o inventor do cais!'
+          : 'Tome o barco do cais, [NOME]!\nEstá ancorado ao sul. Rumo\nà Ilha Veyra!\n---\nO templo é cercado de\nmontanhas. Fale com Zéfiro,\no inventor do cais!';
       this.dialogueBox.start(npc.name, msg, () => {
+        gameState.setFlag('barco_obtido', true);
         gameState.setFlag('ilha_acessivel', true);
+        gameState.boatPos = { x: 45, y: 96 };
+        soundManager.playSfx('victory');
         npc.resetDirection();
-        this.loadMap('overworld', 36, 54, 'down');
+        this.dialogueBox.start(
+          'BARCO',
+          'Você recebeu um BARCO!\nAndando pela água ele\nnavega; ao pisar em terra\nvocê desembarca.\n---\nEncoste nele para embarcar\nde novo.'
+        );
       });
       return;
     }
@@ -1206,6 +1297,29 @@ export class MapScene implements Scene {
         }
         gameState.setFlag('carga_perdida_resolvida', true);
       }
+      if (sign.setFlag === 'vapor_coletado') {
+        // Missão noturna do balão: o vapor só sobe com a maré da noite e exige o pedido de Zéfiro
+        if (!gameState.getFlag('balao_missao_vapor')) {
+          this.dialogueBox.start('CAIS', 'A água do cais brilha de\nleve, mas você não sabe\npara que serve...');
+          return true;
+        }
+        if (gameState.getItemQuantity('frasco_vapor') > 0) {
+          this.dialogueBox.start('VAPOR DA MARÉ', 'Você já encheu o frasco.\nLeve-o a Zéfiro!');
+          return true;
+        }
+        if (!gameState.isNight()) {
+          this.dialogueBox.start(
+            'VAPOR DA MARÉ',
+            'A maré está baixa e calma.\nO vapor só sobe à NOITE!\n---\nDescanse na Estalagem até\nanoitecer e volte aqui.'
+          );
+          return true;
+        }
+        soundManager.playSfx('chest');
+        gameState.addItem('frasco_vapor', 1);
+        gameState.setFlag('vapor_coletado', true);
+        this.dialogueBox.start(sign.title || 'VAPOR DA MARÉ', sign.text);
+        return true;
+      }
       if (sign.setFlag) {
         gameState.setFlag(sign.setFlag, true);
       }
@@ -1498,6 +1612,7 @@ export class MapScene implements Scene {
   private handleHeroDefeat(): void {
     // Respawn do herói no último ponto de repouso (estalagem ou trono do rei)
     const pt = gameState.respawn();
+    gameState.transport = 'foot';
     this.loadMap(pt.mapId, pt.tileX, pt.tileY, pt.dir);
   }
 
@@ -1514,6 +1629,7 @@ export class MapScene implements Scene {
       if (this.warpProgress >= 1) {
         this.warpProgress = 1;
         if (this.pendingWarp) {
+          gameState.transport = 'foot';
           this.loadMap(
             this.pendingWarp.targetMap,
             this.pendingWarp.targetX,
@@ -1567,6 +1683,10 @@ export class MapScene implements Scene {
     }
 
     // 4. Interação quando parado: Falar com NPC/Placa/Baú ou Abrir Menu
+    if (!this.player.isMoving && this.input.wasPressed('confirm') && gameState.transport === 'balloon') {
+      this.tryLandBalloon();
+      return;
+    }
     if (!this.player.isMoving && this.input.wasPressed('confirm')) {
       const talked = this.tryTalkToNpc();
       if (!talked) {
@@ -1601,7 +1721,7 @@ export class MapScene implements Scene {
         this.player.isMoving ? this.player.targetTileY : undefined
       );
     }
-    this.player.update(this.input, this.currentMap, visibleNpcs);
+    this.player.update(this.input, this.transportSolidMap, visibleNpcs);
     this.currentMap.update();
 
     // 6. Câmera segue o herói suavemente travada nas bordas
@@ -1617,7 +1737,14 @@ export class MapScene implements Scene {
       );
 
       const currentTile = this.currentMap.getTileAt(this.player.tileX, this.player.tileY);
-      const isDoorTile =
+
+      // Embarque / desembarque de barco e balão no mapa-múndi
+      if (this.currentMapId === 'overworld') {
+        this.handleTransportAfterStep();
+        if (gameState.transport === 'balloon') {
+          return; // sobrevoando: sem portais, encontros ou eventos de terreno
+        }
+      }      const isDoorTile =
         currentTile?.kind === 'door' ||
         currentTile?.id === 'castle_gate' ||
         this.currentMap.mapType === 'interior';
@@ -1747,6 +1874,107 @@ export class MapScene implements Scene {
     }
   }
 
+  /** Colisão do herói conforme o meio de transporte atual. */
+  private isSolidForTransport(x: number, y: number): boolean {
+    const map = this.currentMap;
+    if (this.currentMapId !== 'overworld') return map.isSolid(x, y);
+
+    const inBounds = x >= 0 && x < map.width && y >= 0 && y < map.height;
+    const transport = gameState.transport;
+
+    if (transport === 'balloon') return !inBounds;
+
+    if (transport === 'boat') {
+      if (!inBounds) return true;
+      if (map.getTileAt(x, y)?.id === 'water') return false;
+      return map.isSolid(x, y);
+    }
+
+    // A pé: pode encostar no barco ancorado para embarcar
+    const boat = gameState.boatPos;
+    if (boat && boat.x === x && boat.y === y) return false;
+    return map.isSolid(x, y);
+  }
+
+  /** Processa embarque (pisar no veículo) e desembarque (barco chegando à terra) após cada passo. */
+  private handleTransportAfterStep(): void {
+    const px = this.player.tileX;
+    const py = this.player.tileY;
+    const transport = gameState.transport;
+
+    if (transport === 'foot') {
+      const boat = gameState.boatPos;
+      const balloon = gameState.balloonPos;
+      if (boat && boat.x === px && boat.y === py) {
+        gameState.transport = 'boat';
+        gameState.boatPos = null;
+        soundManager.playSfx('confirm');
+      } else if (balloon && balloon.x === px && balloon.y === py) {
+        gameState.transport = 'balloon';
+        gameState.balloonPos = null;
+        soundManager.playSfx('stairs');
+        this.dialogueBox.start(
+          'BALÃO',
+          'Você sobe no balão e voa\nsobre qualquer terreno!\n---\nAperte Z (confirmar) sobre\num terreno livre para pousar.'
+        );
+      }
+      return;
+    }
+
+    if (transport === 'boat') {
+      const tile = this.currentMap.getTileAt(px, py);
+      if (tile?.id !== 'water') {
+        // Desembarcou: o barco fica ancorado no último tile de água percorrido
+        const dx = this.player.direction === 'left' ? 1 : this.player.direction === 'right' ? -1 : 0;
+        const dy = this.player.direction === 'up' ? 1 : this.player.direction === 'down' ? -1 : 0;
+        gameState.boatPos = { x: px + dx, y: py + dy };
+        gameState.transport = 'foot';
+        soundManager.playSfx('cursor');
+      }
+    }
+  }
+
+  /** Tenta pousar o balão no tile atual (só em terreno livre e sem portal). */
+  private tryLandBalloon(): void {
+    const px = this.player.tileX;
+    const py = this.player.tileY;
+    const tile = this.currentMap.getTileAt(px, py);
+    const ok =
+      tile !== null &&
+      !tile.solid &&
+      tile.id !== 'water' &&
+      tile.kind !== 'entrance' &&
+      !this.currentMap.getWarpAt(px, py);
+    if (!ok) {
+      soundManager.playSfx('error');
+      this.dialogueBox.start('BALÃO', 'Não há onde pousar aqui.\nProcure um terreno livre!');
+      return;
+    }
+    gameState.balloonPos = { x: px, y: py };
+    gameState.transport = 'foot';
+    soundManager.playSfx('stairs');
+  }
+
+  /** Desenha barco e balão estacionados e o veículo em uso pelo herói. */
+  private renderVehicle(
+    renderer: Renderer,
+    kind: 'boat' | 'balloon',
+    pixelX: number,
+    pixelY: number,
+    airborne = false
+  ): void {
+    const sprite = getVehicleSprite(kind);
+    const pos = this.camera.toScreen(pixelX, pixelY);
+    if (pos.x < -16 || pos.x > CONFIG.screen.width || pos.y < -16 || pos.y > CONFIG.screen.height) return;
+    if (airborne) {
+      const bob = Math.floor(Date.now() / 300) % 2;
+      renderer.fillRect(pos.x + 3, pos.y + 13, 10, 2, NES_COLORS.DARK_GRAY);
+      renderer.drawSprite(sprite, pos.x, pos.y - 6 - bob);
+    } else {
+      renderer.drawSprite(sprite, pos.x, pos.y);
+    }
+  }
+
   /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e narra o evento. */
   private finishEarthquake(): void {
     const original = new TiledMap('overworld', MAP_REGISTRY['overworld'].json);
@@ -1782,8 +2010,21 @@ export class MapScene implements Scene {
       npc.render(renderer, this.camera, this.assetManager);
     }
 
-    // 4. Renderiza o herói
-    this.player.render(renderer, this.camera, this.assetManager);
+    // 4. Renderiza veículos estacionados e o herói (a bordo de barco/balão, se for o caso)
+    if (this.currentMapId === 'overworld') {
+      const boat = gameState.boatPos;
+      const balloon = gameState.balloonPos;
+      if (boat) this.renderVehicle(renderer, 'boat', boat.x * 16, boat.y * 16);
+      if (balloon) this.renderVehicle(renderer, 'balloon', balloon.x * 16, balloon.y * 16);
+      if (gameState.transport === 'boat') {
+        this.renderVehicle(renderer, 'boat', this.player.pixelX, this.player.pixelY);
+      }
+    }
+    if (gameState.transport !== 'balloon') {
+      this.player.render(renderer, this.camera, this.assetManager);
+    } else {
+      this.renderVehicle(renderer, 'balloon', this.player.pixelX, this.player.pixelY, true);
+    }
 
     if (shaking) renderer.ctx.restore();
 
