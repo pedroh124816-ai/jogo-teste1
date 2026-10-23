@@ -278,6 +278,68 @@ export class MapScene implements Scene {
       return;
     }
 
+    // 0.9 Missão secundária: Barqueiro Tião (Porto do Sol) — carona até a costa de Vau-Cinza
+    if (npc.name === 'Barqueiro Tião') {
+      if (!gameState.getFlag('barqueiro_pedido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Sou o Tião, barqueiro do\ncais. Minha filha Lia está\ncom febre há dias...\n---\nTraga-me 2 Ervas de Cura\ne eu lhe devo um favor,\nviajante!',
+          () => {
+            gameState.setFlag('barqueiro_pedido', true);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+      if (!gameState.getFlag('barqueiro_ajudado')) {
+        if (gameState.getItemQuantity('erva_cura') >= 2) {
+          this.dialogueBox.start(
+            npc.name,
+            'Ervas de Cura! Que os\nventos lhe sejam gentis!\n---\nLia vai melhorar. Tome\n40 de ouro pelo trabalho.\nEu levo você de barco\nquando o mar acalmar!',
+            () => {
+              gameState.removeItem('erva_cura', 2);
+              gameState.addGold(40);
+              gameState.setFlag('barqueiro_ajudado', true);
+              soundManager.playSfx('coins');
+              npc.resetDirection();
+            }
+          );
+        } else {
+          this.dialogueBox.start(
+            npc.name,
+            'Preciso de 2 Ervas de\nCura para a pequena Lia.\nElas vendem na cidade!',
+            () => npc.resetDirection()
+          );
+        }
+        return;
+      }
+      if (!gameState.getFlag('ato2_concluido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'O mar a oeste está\nrevolto, [NOME]. Volte quando\no Rei liberar as fronteiras\ne eu levo você de barco!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      this.dialogueBox.startWithChoice(
+        npc.name,
+        'O mar acalmou! Posso levar\nvocê pela costa até as\nterras de Vau-Cinza. Vamos?',
+        ['Zarpar', 'Ficar'],
+        (choiceIdx) => {
+          npc.resetDirection();
+          if (choiceIdx === 0) {
+            this.triggerWarp({
+              targetMap: 'overworld',
+              targetX: 22,
+              targetY: 91,
+              targetDir: 'up',
+            });
+          }
+        }
+      );
+      return;
+    }
+
     // 1. Chefe do Ato 1: Ulan, a Fera (Caverna B2)
     if (npc.name === 'Ulan, a Fera') {
       const introText = npc.getActiveDialogue();

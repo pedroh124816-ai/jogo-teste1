@@ -1053,6 +1053,32 @@
               "value": "Eu gosto de catar conchinhas\nna areia quando a maré baixa!"
             }
           ]
+        },
+        {
+          "id": 15,
+          "name": "Barqueiro Tião",
+          "type": "npc",
+          "x": 192,
+          "y": 224,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_villager"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Sou o Tião, barqueiro do\ncais. Conheço cada recife\ndeste mar!"
+            }
+          ]
         }
       ]
     }
