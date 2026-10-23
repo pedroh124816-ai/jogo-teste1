@@ -258,14 +258,42 @@ describe('Validação do Sistema de Mapas', () => {
       }
     }
 
+    // Entradas acessíveis exclusivamente por veículos aéreos (como o balão de ar quente em ilhas cercadas por montanhas/mar)
+    const aerialOnlyEntrances = new Set(['santuario_celeste']);
+
     // Verifica que cada entrada no overworld foi alcançada pela busca
     for (const entrance of entranceWarps) {
+      if (aerialOnlyEntrances.has(entrance.name)) {
+        continue;
+      }
       const key = `${entrance.x},${entrance.y}`;
       expect(
         visited.has(key),
         `Entrada do overworld '${entrance.name}' em (${entrance.x}, ${entrance.y}) não é alcançável a pé a partir de (${startX}, ${startY})!`
       ).toBe(true);
     }
+  });
+
+  it('santuário celeste deve ser acessível via balão na ilha secreta e conter o Guardião e o Baú Solar', () => {
+    const overworld = allMaps.get('overworld')!;
+    const santuario = allMaps.get('santuario_celeste')!;
+    expect(santuario, 'Mapa santuario_celeste deve existir').toBeTruthy();
+    expect(santuario.width).toBe(14);
+    expect(santuario.height).toBe(16);
+
+    // No overworld, deve haver a entrada santuario_celeste
+    const owObjects = overworld.layers.find((l) => l.type === 'objectgroup')?.objects || [];
+    const warpSantuario = owObjects.find((o) => o.name === 'santuario_celeste');
+    expect(warpSantuario, 'Entrada santuario_celeste deve existir no overworld').toBeTruthy();
+
+    // No santuario_celeste, deve haver npc Guardião Celeste e baú bau_espada_solar
+    const stObjects = santuario.layers.find((l) => l.type === 'objectgroup')?.objects || [];
+    const guardiao = stObjects.find((o) => o.name === 'Guardião Celeste');
+    expect(guardiao, 'NPC Guardião Celeste deve existir no santuário').toBeTruthy();
+
+    const bau = stObjects.find((o) => o.name === 'bau_espada_solar');
+    expect(bau, 'Baú da espada solar deve existir no santuário').toBeTruthy();
+    expect(getProp(bau?.properties, 'item')).toBe('espada_solar');
   });
 
   it('florestas devem ser andáveis com maior taxa de encontro e entradas do overworld devem ter tiles visíveis', () => {

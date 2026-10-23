@@ -546,6 +546,45 @@ export class MapScene implements Scene {
       return;
     }
 
+    // 0.98 Desafio do Santuário Celeste: Guardião Celeste (Ilha Secreta do Balão)
+    if (npc.name === 'Guardião Celeste') {
+      if (gameState.getFlag('guardiao_celeste_derrotado')) {
+        this.dialogueBox.start(
+          npc.name,
+          'A luz da Espada Solar agora\nguia os seus passos, Campeão\ndos Céus!\n---\nQue o calor do Grande Lume\nilumine seus caminhos contra\na escuridão!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      this.dialogueBox.start(
+        npc.name,
+        'Viajante dos céus... Há séculos\nnenhum mortal pisa neste solo.\n---\nSe busca a lendária Espada Solar\ndos Antigos, prove sua honra\ne coragem em combate!',
+        () => {
+          npc.resetDirection();
+          const guardianDef = getMonsterDef('guardiao_espectral') || getMonsterDef('ulan_fera')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              guardianDef,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                gameState.setFlag('guardiao_celeste_derrotado', true);
+                soundManager.playSfx('victory');
+                this.dialogueBox.start(
+                  'Guardião Celeste',
+                  'Incrível! Sua lâmina pulsa com\na verdadeira determinação do Sol!\n---\nO selo do Altar Celeste foi\ndesfeito. Abrace seu destino e\nreclame a Espada Solar!'
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
     // 1. Chefe do Ato 1: Ulan, a Fera (Caverna B2)
     if (npc.name === 'Ulan, a Fera') {
       const introText = npc.getActiveDialogue();
@@ -1462,6 +1501,15 @@ export class MapScene implements Scene {
     // 3. Tenta interagir com baú de frente
     const chest = this.currentMap.getChestAt(facing.x, facing.y);
     if (chest) {
+      if (chest.id === 'bau_espada_solar' && !gameState.getFlag('guardiao_celeste_derrotado')) {
+        soundManager.playSfx('error');
+        this.dialogueBox.start(
+          'ALTAR SELADO',
+          'O baú sagrado está protegido\npela barreira mágica do Guardião!\nDerrote-o para libertar o selo.'
+        );
+        return true;
+      }
+
       if (gameState.openedChests.has(chest.id)) {
         soundManager.playSfx('error');
         this.dialogueBox.start('BAÚ', 'O baú está vazio.');
@@ -1482,7 +1530,11 @@ export class MapScene implements Scene {
           gameState.setFlag('bau_ulan_aberto', true);
         }
 
-        this.dialogueBox.start('BAÚ', chest.message || 'Você abriu o baú do tesouro!');
+        const defaultMsg =
+          chest.id === 'bau_espada_solar'
+            ? 'Você abriu o baú do Altar Celeste!\nEncontrou a lendária ESPADA SOLAR\ne 250 Moedas de Ouro!'
+            : 'Você abriu o baú do tesouro!';
+        this.dialogueBox.start('BAÚ', chest.message || defaultMsg);
       }
       return true;
     }

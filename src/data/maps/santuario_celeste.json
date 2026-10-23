@@ -1,0 +1,194 @@
+{
+  "type": "map",
+  "version": "1.10",
+  "tiledversion": "1.10.2",
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "compressionlevel": -1,
+  "width": 14,
+  "height": 16,
+  "tilewidth": 16,
+  "tileheight": 16,
+  "infinite": false,
+  "properties": [
+    {
+      "name": "id",
+      "type": "string",
+      "value": "santuario_celeste"
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "value": "SANTUÁRIO CELESTE"
+    },
+    {
+      "name": "mapType",
+      "type": "string",
+      "value": "caverna"
+    },
+    {
+      "name": "music",
+      "type": "string",
+      "value": "shrine"
+    },
+    {
+      "name": "boundaryTile",
+      "type": "string",
+      "value": "black_void"
+    },
+    {
+      "name": "exitOnEdge",
+      "type": "bool",
+      "value": false
+    },
+    {
+      "name": "edgeExit",
+      "type": "string",
+      "value": ""
+    }
+  ],
+  "tilesets": [
+    {
+      "firstgid": 1,
+      "name": "luminario_tileset",
+      "tilewidth": 16,
+      "tileheight": 16
+    }
+  ],
+  "layers": [
+    {
+      "id": 1,
+      "name": "terreno",
+      "type": "tilelayer",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "width": 14,
+      "height": 16,
+      "data": [
+        6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,
+        6, 35, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 35,  6,
+        6, 20, 20, 20, 20, 20, 19, 23, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 45, 44, 20, 20, 20, 21, 21, 20, 20, 20, 44, 45,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 35, 20, 20, 21, 21, 20, 20, 35, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 35, 20, 20, 21, 21, 20, 20, 35, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 35, 20, 20, 21, 21, 20, 20, 35, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 21, 20, 20, 20, 20, 20,  6,
+        6, 20, 20, 20, 20, 20, 21, 27, 20, 20, 20, 20, 20,  6,
+        6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6
+      ]
+    },
+    {
+      "id": 2,
+      "name": "objetos",
+      "type": "objectgroup",
+      "visible": true,
+      "opacity": 1,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "saida",
+          "type": "warp",
+          "x": 112,
+          "y": 224,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "target",
+              "type": "string",
+              "value": "overworld:santuario_celeste"
+            },
+            {
+              "name": "arriveDir",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "trigger",
+              "type": "string",
+              "value": "stairs"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "bau_espada_solar",
+          "type": "chest",
+          "x": 112,
+          "y": 32,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "item",
+              "type": "string",
+              "value": "espada_solar"
+            },
+            {
+              "name": "gold",
+              "type": "int",
+              "value": 250
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "placa_altar",
+          "type": "sign",
+          "x": 96,
+          "y": 32,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "ALTAR SOLAR"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "Aqui repousa a Lâmina Solar.\nApenas aquele que derrotar o\nGuardião poderá empunhá-la."
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "name": "Guardião Celeste",
+          "type": "npc",
+          "x": 112,
+          "y": 48,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_guard"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Viajante dos céus... Há séculos\nnenhum mortal pisa neste solo.\n---\nSe busca a Lâmina Solar dos\nAntigos, prove seu valor perante\no Guardião Celeste!"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

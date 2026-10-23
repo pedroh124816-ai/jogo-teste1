@@ -208,6 +208,14 @@
     "description": "Espada ancestral que vibra\ncom o Eco puro. (ATQ +60)"
   },
   {
+    "id": "espada_solar",
+    "name": "Espada Solar",
+    "type": "weapon",
+    "price": 1800,
+    "atkBonus": 68,
+    "description": "Lâmina forjada na aurora dos\ntempos. Reluz com luz solar!\n(ATQ +68)"
+  },
+  {
     "id": "armadura_bronze",
     "name": "Armadura Bronze",
     "type": "armor",

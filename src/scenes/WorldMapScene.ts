@@ -61,6 +61,7 @@ export class WorldMapScene implements Scene {
     { key: 'cidade_2', label: 'PORTO SOL', tileX: 44, tileY: 92, color: NES_COLORS.LIGHT_BLUE },
     { key: 'santuario', label: 'SANTUÁRIO', tileX: 84, tileY: 32, color: NES_COLORS.WHITE },
     { key: 'caverna', label: 'CAVERNA', tileX: 94, tileY: 84, color: NES_COLORS.RED },
+    { key: 'santuario_celeste', label: 'ILHA CÉU', tileX: 116, tileY: 114, color: NES_COLORS.CYAN },
   ];
 
   constructor(
@@ -128,6 +129,7 @@ export class WorldMapScene implements Scene {
     if (this.currentMapId.startsWith('castelo')) matchKey = 'castelo';
     else if (this.currentMapId.startsWith('cidade_1')) matchKey = 'cidade_1';
     else if (this.currentMapId.startsWith('cidade_2')) matchKey = 'cidade_2';
+    else if (this.currentMapId === 'santuario_celeste') matchKey = 'santuario_celeste';
     else if (this.currentMapId === 'cripta_refino' || this.currentMapId.startsWith('santuario')) {
       matchKey = 'santuario';
     } else if (this.currentMapId.startsWith('caverna')) matchKey = 'caverna';
