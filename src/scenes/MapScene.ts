@@ -263,7 +263,14 @@ export class MapScene implements Scene {
     ];
     if (this.currentMapId === 'cidade_1_estalagem' || innNpcNames.includes(npc.name)) {
       npc.resetDirection();
-      this.sceneManager.push(new InnScene(this.sceneManager, this.input, 10));
+      this.sceneManager.push(
+        new InnScene(this.sceneManager, this.input, 10, {
+          mapId: this.currentMapId,
+          tileX: this.player.tileX,
+          tileY: this.player.tileY,
+          dir: this.player.direction,
+        })
+      );
       return;
     }
 
@@ -1253,8 +1260,8 @@ export class MapScene implements Scene {
         this.dialogueBox.start('BARRIL', `Você revistou o barril e\nencontrou ${gold} Moedas de Ouro!`);
       } else if (roll === 1) {
         soundManager.playSfx('chest');
-        gameState.addItem('erva_medicinal', 1);
-        this.dialogueBox.start('BARRIL', 'Você revistou o barril e\nencontrou uma Erva Medicinal!');
+        gameState.addItem('erva_cura', 1);
+        this.dialogueBox.start('BARRIL', 'Você revistou o barril e\nencontrou uma Erva Curativa!');
       } else if (roll === 2) {
         soundManager.playSfx('coins');
         const gold = 10;
@@ -1282,8 +1289,8 @@ export class MapScene implements Scene {
         this.dialogueBox.start('VASO', `Você espiou dentro do vaso e\nencontrou ${gold} Moedas de Ouro!`);
       } else if (roll === 1) {
         soundManager.playSfx('chest');
-        gameState.addItem('pocao_vida', 1);
-        this.dialogueBox.start('VASO', 'Dentro do vaso de barro havia\num frasco de Poção de Vida!');
+        gameState.addItem('tonico_brasa', 1);
+        this.dialogueBox.start('VASO', 'Dentro do vaso de barro havia\num Tônico de Brasa!');
       } else {
         soundManager.playSfx('cursor');
         this.dialogueBox.start('VASO', 'Você espiou o interior do\nvaso, mas só havia poeira\ne sementes secas.');
@@ -1423,8 +1430,9 @@ export class MapScene implements Scene {
   }
 
   private handleHeroDefeat(): void {
-    // Respawn do herói diante do trono do Rei Auren no Castelo Real
-    this.loadMap('castelo', 18, 6, 'up');
+    // Respawn do herói no último ponto de repouso (estalagem ou trono do rei)
+    const pt = gameState.respawn();
+    this.loadMap(pt.mapId, pt.tileX, pt.tileY, pt.dir);
   }
 
   public update(): void {

@@ -148,15 +148,16 @@ export class BattleScene implements Scene {
         break;
       case 'victory':
         if (this.input.wasPressed('confirm')) {
-          if (this.onVictory) this.onVictory();
+          const victoryCallback = this.onVictory;
           this.sceneManager.pop();
+          if (victoryCallback) victoryCallback();
         }
         break;
       case 'defeat':
         if (this.input.wasPressed('confirm')) {
-          gameState.respawnAtCastle();
-          if (this.onDefeat) this.onDefeat();
+          const defeatCallback = this.onDefeat;
           this.sceneManager.pop();
+          if (defeatCallback) defeatCallback();
         }
         break;
       case 'flee':

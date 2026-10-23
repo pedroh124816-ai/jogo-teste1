@@ -16,6 +16,12 @@ export class InnScene implements Scene {
   private sceneManager: SceneManager;
   private input: Input;
   private cost: number;
+  private respawnPoint?: {
+    mapId: string;
+    tileX: number;
+    tileY: number;
+    dir?: 'up' | 'down' | 'left' | 'right';
+  };
 
   private phase: InnPhase = 'prompt';
   private selectedIndex = 0; // 0 = MANHÃ, 1 = NOITE, 2 = NÃO
@@ -25,10 +31,21 @@ export class InnScene implements Scene {
   private resultMessage = '';
   private cursorTimer = 0;
 
-  constructor(sceneManager: SceneManager, input: Input, cost = 10) {
+  constructor(
+    sceneManager: SceneManager,
+    input: Input,
+    cost = 10,
+    respawnPoint?: {
+      mapId: string;
+      tileX: number;
+      tileY: number;
+      dir?: 'up' | 'down' | 'left' | 'right';
+    }
+  ) {
     this.sceneManager = sceneManager;
     this.input = input;
     this.cost = cost;
+    this.respawnPoint = respawnPoint;
   }
 
   public enter(): void {
@@ -79,6 +96,14 @@ export class InnScene implements Scene {
             );
           } else {
             this.resultMessage = timeMsg;
+          }
+          if (this.respawnPoint) {
+            gameState.setRespawnPoint(
+              this.respawnPoint.mapId,
+              this.respawnPoint.tileX,
+              this.respawnPoint.tileY,
+              this.respawnPoint.dir ?? 'down'
+            );
           }
           gameState.saveGame();
         } else {

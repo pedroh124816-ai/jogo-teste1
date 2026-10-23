@@ -6,9 +6,10 @@ import { NES_COLORS } from '../engine/Palette';
 import { CONFIG } from '../config';
 import { gameState } from '../state/GameState';
 import { getItemDef } from '../data/items';
+import { getSpellDef } from '../data/monsters';
 import { soundManager } from '../engine/AudioManager';
 
-type MenuMode = 'commands' | 'status' | 'items' | 'options' | 'message';
+type MenuMode = 'commands' | 'status' | 'items' | 'magic' | 'options' | 'message';
 
 export class MenuScene implements Scene {
   public readonly name = 'MenuScene';
@@ -21,6 +22,7 @@ export class MenuScene implements Scene {
   private selectedIndex = 0;
   private itemCursor = 0;
   private itemScroll = 0;
+  private magicCursor = 0;
   private optionsCursor = 0;
   private readonly maxVisibleItems = 5;
 
@@ -118,7 +120,73 @@ export class MenuScene implements Scene {
       return;
     }
 
-    // 4. Sub-menu interativo de OPÇÕES
+    // 4. Sub-menu interativo de MAGIAS
+    if (this.mode === 'magic') {
+      const spells = gameState.spells;
+
+      if (this.input.wasPressed('cancel')) {
+        soundManager.playSfx('cancel');
+        this.mode = 'commands';
+        return;
+      }
+
+      if (spells.length === 0) {
+        if (this.input.wasPressed('confirm')) {
+          soundManager.playSfx('cancel');
+          this.mode = 'commands';
+        }
+        return;
+      }
+
+      if (this.input.wasPressed('up')) {
+        this.magicCursor = (this.magicCursor - 1 + spells.length) % spells.length;
+        soundManager.playSfx('cursor');
+      } else if (this.input.wasPressed('down')) {
+        this.magicCursor = (this.magicCursor + 1) % spells.length;
+        soundManager.playSfx('cursor');
+      } else if (this.input.wasPressed('confirm')) {
+        const spellId = spells[this.magicCursor];
+        const spell = getSpellDef(spellId);
+        if (!spell) return;
+
+        if (spell.type !== 'heal') {
+          soundManager.playSfx('error');
+          this.showMessage(
+            `A magia ${spell.name} só\npode ser usada em combate!`,
+            'magic'
+          );
+          return;
+        }
+
+        if (gameState.hp >= gameState.maxHp) {
+          soundManager.playSfx('error');
+          this.showMessage('Seus PV já estão no\nmáximo.', 'magic');
+          return;
+        }
+
+        if (gameState.mp < spell.mpCost) {
+          soundManager.playSfx('error');
+          this.showMessage('Pontos de Magia (PM)\ninsuficientes!', 'magic');
+          return;
+        }
+
+        soundManager.playSfx('heal');
+        gameState.mp -= spell.mpCost;
+        const heal = Math.floor(
+          spell.powerMin + Math.random() * (spell.powerMax - spell.powerMin + 1)
+        );
+        const before = gameState.hp;
+        gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
+        const recovered = gameState.hp - before;
+        this.showMessage(
+          `Lançou ${spell.name}!\nRecuperou ${recovered} PV\n(${gameState.hp}/${gameState.maxHp}).`,
+          'magic'
+        );
+      }
+      return;
+    }
+
+    // 5. Sub-menu interativo de OPÇÕES
     if (this.mode === 'options') {
       if (this.input.wasPressed('cancel')) {
         soundManager.playSfx('cancel');
@@ -229,37 +297,9 @@ export class MenuScene implements Scene {
           return;
         }
 
-        if (gameState.hasSpell('cura') || gameState.hasSpell('cura_maior')) {
-          const isMajor = gameState.hasSpell('cura_maior') && gameState.mp >= 7;
-          const cost = isMajor ? 7 : 3;
-          const healMin = isMajor ? 60 : 25;
-          const healMax = isMajor ? 80 : 35;
-          const spellName = isMajor ? 'Cura Maior' : 'Cura';
-
-          if (gameState.hp >= gameState.maxHp) {
-            soundManager.playSfx('error');
-            this.showMessage('Seus PV já estão no\nmáximo.', 'commands');
-            return;
-          }
-
-          if (gameState.mp < cost) {
-            soundManager.playSfx('error');
-            this.showMessage('Pontos de Magia (PM)\ninsuficientes!', 'commands');
-            return;
-          }
-
-          soundManager.playSfx('heal');
-          gameState.mp -= cost;
-          const heal = healMin + Math.floor(Math.random() * (healMax - healMin + 1));
-          const before = gameState.hp;
-          gameState.hp = Math.min(gameState.maxHp, gameState.hp + heal);
-          const recovered = gameState.hp - before;
-          this.showMessage(`Lançou ${spellName}!\nRecuperou ${recovered} PV\n(${gameState.hp}/${gameState.maxHp}).`, 'commands');
-          return;
-        }
-
-        soundManager.playSfx('error');
-        this.showMessage('Suas magias ativas só\npodem ser usadas em luta.', 'commands');
+        soundManager.playSfx('confirm');
+        this.magicCursor = 0;
+        this.mode = 'magic';
         return;
       }
 
@@ -272,6 +312,12 @@ export class MenuScene implements Scene {
 
       if (cmd === 'SALVAR') {
         soundManager.playSfx('coins');
+        gameState.setRespawnPoint(
+          gameState.savedMapId,
+          gameState.savedTileX,
+          gameState.savedTileY,
+          gameState.savedDir
+        );
         gameState.saveGame();
         this.showMessage(
           `Jogo salvo com sucesso!\nHerói: ${gameState.name} (Nv.${gameState.level})\nProgresso registrado.`,
@@ -353,12 +399,17 @@ export class MenuScene implements Scene {
       this.renderItemsWindow(renderer);
     }
 
-    // 5. Janela interativa de OPÇÕES
+    // 5. Janela interativa de MAGIAS
+    if (this.mode === 'magic' || (this.mode === 'message' && this.returnModeAfterMessage === 'magic')) {
+      this.renderMagicWindow(renderer);
+    }
+
+    // 6. Janela interativa de OPÇÕES
     if (this.mode === 'options') {
       this.renderOptionsWindow(renderer);
     }
 
-    // 6. Caixa de mensagem inferior (quando ativa)
+    // 7. Caixa de mensagem inferior (quando ativa)
     if (this.mode === 'message' && this.messageDialogText !== null) {
       const msgX = 8;
       const msgY = 152;
@@ -454,6 +505,52 @@ export class MenuScene implements Scene {
     const currentDef = currentSlot ? getItemDef(currentSlot.itemId) : null;
     if (currentDef) {
       renderer.drawText(currentDef.description, ix + 10, iy + 94, {
+        color: NES_COLORS.LIGHT_BLUE,
+        lineHeight: 12,
+      });
+    }
+  }
+
+  private renderMagicWindow(renderer: Renderer): void {
+    const mx = 8;
+    const my = 86;
+    const mw = 240;
+    const mh = 130;
+
+    renderer.drawWindow(mx, my, mw, mh, NES_COLORS.BLACK);
+    renderer.drawText('MAGIAS DO LUME', mx + 10, my + 8, { color: NES_COLORS.PALE_GREEN });
+    renderer.fillRect(mx + 8, my + 18, mw - 16, 1, NES_COLORS.WHITE);
+
+    const spells = gameState.spells;
+    for (let i = 0; i < spells.length; i++) {
+      const spellId = spells[i];
+      const def = getSpellDef(spellId);
+      const rowY = my + 24 + i * 12;
+      const isSelected = i === this.magicCursor;
+
+      if (isSelected && this.mode === 'magic') {
+        const blink = Math.floor(this.cursorTimer / CONFIG.ui.cursorBlinkFrames) % 2 === 0;
+        if (blink) {
+          renderer.drawText('►', mx + 8, rowY, { color: NES_COLORS.WHITE });
+        }
+      }
+
+      const spellName = def ? def.name : spellId;
+      const mpCost = def ? `${def.mpCost} PM` : '';
+      const color = isSelected ? NES_COLORS.WHITE : NES_COLORS.LIGHT_GRAY;
+
+      renderer.drawText(spellName, mx + 18, rowY, { color });
+      renderer.drawText(mpCost, mx + mw - 54, rowY, {
+        color: gameState.mp >= (def?.mpCost ?? 0) ? NES_COLORS.CYAN : NES_COLORS.RED,
+      });
+    }
+
+    // Descrição da magia selecionada no rodapé da janela
+    renderer.fillRect(mx + 8, my + 88, mw - 16, 1, NES_COLORS.DARK_GRAY);
+    const currentSpellId = spells[this.magicCursor];
+    const currentDef = currentSpellId ? getSpellDef(currentSpellId) : null;
+    if (currentDef) {
+      renderer.drawText(currentDef.description, mx + 10, my + 94, {
         color: NES_COLORS.LIGHT_BLUE,
         lineHeight: 12,
       });

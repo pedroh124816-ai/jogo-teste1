@@ -99,6 +99,11 @@ export class GameState {
   public savedDir: 'up' | 'down' | 'left' | 'right' = 'up';
   public timeOfDay: 'day' | 'night' = 'day';
 
+  public respawnMapId = 'castelo';
+  public respawnTileX = 18;
+  public respawnTileY = 6;
+  public respawnDir: 'up' | 'down' | 'left' | 'right' = 'up';
+
   public settings: GameSettings = {
     bgmVolume: 80,
     sfxVolume: 100,
@@ -440,13 +445,40 @@ export class GameState {
     return this.spells.includes(spellId);
   }
 
-  /**
-   * Penalidade de derrota: metade do ouro, restaura PV/PM e prepara respawn no Castelo.
-   */
-  public respawnAtCastle(): void {
+  public setRespawnPoint(
+    mapId: string,
+    tileX: number,
+    tileY: number,
+    dir: 'up' | 'down' | 'left' | 'right' = 'down'
+  ): void {
+    this.respawnMapId = mapId;
+    this.respawnTileX = tileX;
+    this.respawnTileY = tileY;
+    this.respawnDir = dir;
+  }
+
+  public respawn(): {
+    mapId: string;
+    tileX: number;
+    tileY: number;
+    dir: 'up' | 'down' | 'left' | 'right';
+  } {
     this.gold = Math.floor(this.gold / 2);
     this.hp = this.maxHp;
     this.mp = this.maxMp;
+    return {
+      mapId: this.respawnMapId,
+      tileX: this.respawnTileX,
+      tileY: this.respawnTileY,
+      dir: this.respawnDir,
+    };
+  }
+
+  /**
+   * Penalidade de derrota: metade do ouro, restaura PV/PM e prepara respawn no último ponto salvo/estalagem.
+   */
+  public respawnAtCastle(): void {
+    this.respawn();
   }
 
   public updateLocation(
@@ -491,6 +523,10 @@ export class GameState {
       savedTileY: this.savedTileY,
       savedDir: this.savedDir,
       timeOfDay: this.timeOfDay,
+      respawnMapId: this.respawnMapId,
+      respawnTileX: this.respawnTileX,
+      respawnTileY: this.respawnTileY,
+      respawnDir: this.respawnDir,
       settings: { ...this.settings },
     };
 
@@ -601,6 +637,17 @@ export class GameState {
       }
       if (data.timeOfDay === 'day' || data.timeOfDay === 'night') {
         this.timeOfDay = data.timeOfDay;
+      }
+      if (typeof data.respawnMapId === 'string') this.respawnMapId = data.respawnMapId;
+      if (typeof data.respawnTileX === 'number') this.respawnTileX = data.respawnTileX;
+      if (typeof data.respawnTileY === 'number') this.respawnTileY = data.respawnTileY;
+      if (
+        data.respawnDir === 'up' ||
+        data.respawnDir === 'down' ||
+        data.respawnDir === 'left' ||
+        data.respawnDir === 'right'
+      ) {
+        this.respawnDir = data.respawnDir;
       }
       if (data.settings && typeof data.settings === 'object') {
         this.settings = {

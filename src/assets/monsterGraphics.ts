@@ -613,3 +613,54 @@ MONSTER_RAW_DATA['auren'] = {
     Y: NES_COLORS.WHITE,
   },
 };
+
+MONSTER_RAW_DATA['gosma_azul'] = {
+  ...MONSTER_RAW_DATA['gosma_cinza'],
+  palette: {
+    ...P_GOSMA,
+    '#': NES_COLORS.NAVY_BLUE,
+    X: NES_COLORS.BLUE,
+    O: NES_COLORS.LIGHT_BLUE,
+    W: NES_COLORS.WHITE,
+    R: NES_COLORS.CYAN,
+    K: NES_COLORS.BLACK,
+  },
+};
+
+MONSTER_RAW_DATA['gosma_vermelha'] = {
+  ...MONSTER_RAW_DATA['gosma_cinza'],
+  palette: {
+    ...P_GOSMA,
+    '#': NES_COLORS.DARK_RED,
+    X: NES_COLORS.RED,
+    O: NES_COLORS.SKIN,
+    W: NES_COLORS.YELLOW,
+    R: NES_COLORS.WHITE,
+    K: NES_COLORS.BLACK,
+  },
+};
+
+MONSTER_RAW_DATA['gosma_dourada'] = {
+  ...MONSTER_RAW_DATA['gosma_cinza'],
+  palette: {
+    ...P_GOSMA,
+    '#': NES_COLORS.BROWN,
+    X: NES_COLORS.GOLD,
+    O: NES_COLORS.YELLOW,
+    W: NES_COLORS.WHITE,
+    R: NES_COLORS.LIGHT_BLUE,
+    K: NES_COLORS.BLACK,
+  },
+};
+
+MONSTER_RAW_DATA['lobo_sombrio'] = {
+  ...MONSTER_RAW_DATA['lobo_brasa'],
+  palette: {
+    ...P_LOBO,
+    '#': NES_COLORS.BLACK,
+    X: NES_COLORS.DARK_GRAY,
+    M: NES_COLORS.NAVY_BLUE,
+    W: NES_COLORS.CYAN,
+    R: NES_COLORS.RED,
+  },
+};
