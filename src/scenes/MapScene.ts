@@ -1975,7 +1975,7 @@ export class MapScene implements Scene {
     }
   }
 
-  /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e narra o evento. */
+  /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e exibe a vinheta cinematográfica. */
   private finishEarthquake(): void {
     const original = new TiledMap('overworld', MAP_REGISTRY['overworld'].json);
     for (let y = 41; y <= 43; y++) {
@@ -1983,10 +1983,22 @@ export class MapScene implements Scene {
       if (def) this.currentMap.setTileAt(82, y, def.id);
     }
     soundManager.playSfx('stairs');
-    this.dialogueBox.start(
-      'TERREMOTO',
-      'O chão treme com força!\nAs montanhas a leste\ndesabam num estrondo!\n---\nUm caminho se abriu no\nPasso do Santuário, e a\nponte ao sul está livre!\n---\nSiga ao sul até o Porto\ndo Sol, como o Rei pediu!'
+    const vignette = new VignetteScene(
+      this.sceneManager,
+      this.input,
+      'terremoto_passo',
+      'O Passo Desaba',
+      [
+        'O chão estremece com força!\nUm eco ressoa por todo o vale...',
+        'No desfiladeiro a leste, um\ntrecho maciço de rocha racha\ne desaba num estrondo!',
+        'A poeira sobe e uma fresta\nescura revela o caminho de\nterra no Passo do Santuário.',
+        'A passagem a leste se abriu e\na ponte ao sul está livre!\nSiga ao sul rumo ao Porto do Sol!',
+      ],
+      () => {
+        this.sceneManager.pop();
+      }
     );
+    this.sceneManager.push(vignette);
   }
 
   public render(renderer: Renderer): void {

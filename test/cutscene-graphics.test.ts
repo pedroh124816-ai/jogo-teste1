@@ -6,6 +6,7 @@ describe('Validação das Cinemáticas Retrô 8-bits (Pixel Art)', () => {
   const REQUIRED_CUTSCENES = [
     'tavo_morte',
     'ulan_ultimo_suspiro',
+    'terremoto_passo',
     'queda_ponte_cobre',
     'intro_grande_treva',
     'intro_grande_lume',
@@ -127,5 +128,71 @@ describe('Validação das Cinemáticas Retrô 8-bits (Pixel Art)', () => {
     expect(lumeStr.includes('O')).toBe(true);
     expect(lumeStr.includes('C')).toBe(true);
     expect(lumeStr.includes('G')).toBe(true);
+  });
+
+  it('O Passo Desaba (fim do Ato 1): desfiladeiro ao entardecer com fresta de terra aberta, poeira e pedras', () => {
+    const passo = CUTSCENE_RAW_DATA['terremoto_passo'];
+    expect(passo).toBeDefined();
+    expect(passo.id).toBe('terremoto_passo');
+    expect(passo.name).toBe('O Passo Desaba');
+    expect(passo.act).toBe(1);
+    expect(passo.width).toBe(128);
+    expect(passo.height).toBe(72);
+    expect(passo.frames.length).toBe(2);
+
+    // Valida paleta: céu laranja/roxo, rochas cinzas, vale verde, poeira e caminho de terra
+    expect(passo.palette['N']).toBe(NES_COLORS.NAVY_BLUE);
+    expect(passo.palette['A']).toBe(NES_COLORS.DARK_RED);
+    expect(passo.palette['R']).toBe(NES_COLORS.RED);
+    expect(passo.palette['H']).toBe(NES_COLORS.SKIN);
+    expect(passo.palette['S']).toBe(NES_COLORS.SAND);
+    expect(passo.palette['G']).toBe(NES_COLORS.DEEP_GREEN);
+    expect(passo.palette['F']).toBe(NES_COLORS.FOREST_GREEN);
+    expect(passo.palette['P']).toBe(NES_COLORS.GRASS_GREEN);
+    expect(passo.palette['Z']).toBe(NES_COLORS.DARK_BROWN);
+    expect(passo.palette['T']).toBe(NES_COLORS.BROWN);
+    expect(passo.palette['X']).toBe(NES_COLORS.DIRT);
+    expect(passo.palette['D']).toBe(NES_COLORS.DARK_GRAY);
+    expect(passo.palette['M']).toBe(NES_COLORS.MED_GRAY);
+    expect(passo.palette['L']).toBe(NES_COLORS.LIGHT_GRAY);
+
+    const f0Str = passo.frames[0].join('');
+    const f1Str = passo.frames[1].join('');
+
+    // Frames devem ser diferentes (animação de desabamento)
+    expect(f0Str).not.toBe(f1Str);
+
+    // Céu ao entardecer presente em ambos
+    expect(f0Str.includes('N')).toBe(true);
+    expect(f0Str.includes('A')).toBe(true);
+    expect(f0Str.includes('H')).toBe(true);
+
+    // Vale verde e castelo ao fundo presentes
+    expect(f0Str.includes('P')).toBe(true);
+    expect(f0Str.includes('F')).toBe(true);
+    expect(f0Str.includes('O')).toBe(true); // Lume / beacon do castelo
+
+    // Poeira e caminho de terra
+    expect(f0Str.includes('X')).toBe(true);
+    expect(f0Str.includes('T')).toBe(true);
+    expect(f1Str.includes('X')).toBe(true);
+    expect(f1Str.includes('T')).toBe(true);
+
+    // Frame 1 deve ter poeira marrom mais densa e caminho aberto (mais pixels de poeira/areia/pele clara J/S)
+    const dustCountF0 = (f0Str.match(/[STJ]/g) || []).length;
+    const dustCountF1 = (f1Str.match(/[STJ]/g) || []).length;
+    expect(dustCountF1, 'Frame 1 deve ter poeira e areia mais densas que Frame 0').toBeGreaterThan(dustCountF0);
+
+    // Pássaros fugindo no canto superior (linhas 0-14, colunas 90-127)
+    let birdsFoundF0 = false;
+    let birdsFoundF1 = false;
+    for (let r = 0; r < 15; r++) {
+      const row0 = passo.frames[0][r].slice(90);
+      const row1 = passo.frames[1][r].slice(90);
+      if (row0.includes('K')) birdsFoundF0 = true;
+      if (row1.includes('K')) birdsFoundF1 = true;
+    }
+    expect(birdsFoundF0, 'Pássaros devem estar voando no canto superior no Frame 0').toBe(true);
+    expect(birdsFoundF1, 'Pássaros devem estar voando no canto superior no Frame 1').toBe(true);
   });
 });
