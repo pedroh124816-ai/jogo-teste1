@@ -285,6 +285,87 @@ export class MapScene implements Scene {
       return;
     }
 
+    // 0.85 Missão Secundária Noturna de Alvorada: Jardineira Flora e o Jardim do Luar
+    if (npc.name === 'Jardineira Flora') {
+      if (gameState.getFlag('missao_jardim_luar')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Veja como a Flor do Luar\nresplandece com pétalas\nazuladas, [NOME]!\n---\nGraças a você, nosso jardim\nestá protegido da escuridão!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      if (!gameState.isNight()) {
+        this.dialogueBox.start(
+          npc.name,
+          'Olá, viajante! Eu cuido das\nflores azuis do Jardim do Luar.\n---\nNossas flores são mágicas e só\ndesabrocham sob a lua!\n---\nDescanse na Estalagem e volte\naqui à NOITE se quiser vê-las\nabertas sob o luar!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      // Durante a NOITE
+      this.dialogueBox.start(
+        npc.name,
+        'Socorro, viajante! Que bom\nque você apareceu sob a lua!\n---\nUma Praga das Sombras surgiu\nno canteiro sagrado ao lado e\nquer devorar a Flor do Luar!\n---\nAjude-me a enfrentá-la antes\nque a flor murche!',
+        () => {
+          npc.resetDirection();
+          const monster = getMonsterDef('gosma_azul') || getMonsterDef('gosma_cinza')!;
+          this.sceneManager.push(
+            new BattleScene(
+              this.sceneManager,
+              this.input,
+              monster,
+              this.assetManager,
+              () => this.handleHeroDefeat(),
+              () => {
+                gameState.setFlag('missao_jardim_luar', true);
+                gameState.addGold(50);
+                gameState.addItem('tonico_brasa', 1);
+                soundManager.playSfx('victory');
+                this.dialogueBox.start(
+                  'Jardineira Flora',
+                  'Você venceu a criatura das\nsombras! A Flor do Luar\ndesabrochou em toda a glória!\n---\nTome um Tônico de Brasa e\n50 Moedas de Ouro como gratidão\nda vila de Alvorada!'
+                );
+              }
+            )
+          );
+        }
+      );
+      return;
+    }
+
+    // 0.86 Moradores do Distrito Leste de Alvorada
+    if (npc.name === 'Boticário Elor') {
+      if (!gameState.getFlag('elor_conhecido')) {
+        gameState.setFlag('elor_conhecido', true);
+        gameState.addItem('erva_cura', 1);
+        soundManager.playSfx('chest');
+        this.dialogueBox.start(
+          npc.name,
+          'Bem-vindo à minha botica!\nPreparo remédios com as ervas\ncolhidas nos campos de Alvorada.\n---\nTome esta Erva de Cura de\ncortesia para proteger sua vida\npelos caminhos do vale!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+      this.dialogueBox.start(
+        npc.name,
+        'Lembre-se: ervas frescas e\num bom descanso na estalagem\nsalvam qualquer aventureiro!',
+        () => npc.resetDirection()
+      );
+      return;
+    }
+
+    if (npc.name === 'Velho Bento') {
+      this.dialogueBox.start(
+        npc.name,
+        'Saudações, jovem guerreiro!\nServi trinta anos na guarda real\nde Luminário.\n---\nUm conselho de veterano: monstros\nnoturnos são mais agressivos, mas\nrendem o dobro de glória!\n---\nSe ferir-se, não hesite em usar\nsuas magias ou correr!',
+        () => npc.resetDirection()
+      );
+      return;
+    }
+
     // 0.9 Missão secundária: Barqueiro Tião (Porto do Sol) — carona até a costa de Vau-Cinza
     if (npc.name === 'Barqueiro Tião') {
       if (!gameState.getFlag('barqueiro_pedido')) {
