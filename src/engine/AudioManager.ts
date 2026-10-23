@@ -290,6 +290,10 @@ const BGM_TRACKS: Record<Exclude<BgmTrackId, 'none'>, BgmDefinition> = {
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private bgmGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+  private bgmVolume = 0.8;
+  private sfxVolume = 1.0;
   private muted = false;
   private unlocked = false;
 
@@ -342,8 +346,16 @@ export class AudioManager {
       try {
         this.ctx = new AudioCtx();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.25;
+        this.masterGain.gain.value = this.muted ? 0 : 0.25;
         this.masterGain.connect(this.ctx.destination);
+
+        this.bgmGain = this.ctx.createGain();
+        this.bgmGain.gain.value = this.bgmVolume;
+        this.bgmGain.connect(this.masterGain);
+
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.value = this.sfxVolume;
+        this.sfxGain.connect(this.masterGain);
       } catch {
         return null;
       }
@@ -377,6 +389,28 @@ export class AudioManager {
       this.playBgm(trackToResume);
     }
     return this.muted;
+  }
+
+  public setBgmVolume(volume: number): void {
+    this.bgmVolume = Math.max(0, Math.min(1, volume));
+    if (this.bgmGain && this.ctx) {
+      this.bgmGain.gain.setValueAtTime(this.bgmVolume, this.ctx.currentTime);
+    }
+  }
+
+  public getBgmVolume(): number {
+    return this.bgmVolume;
+  }
+
+  public setSfxVolume(volume: number): void {
+    this.sfxVolume = Math.max(0, Math.min(1, volume));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
+  }
+
+  public getSfxVolume(): number {
+    return this.sfxVolume;
   }
 
   /**
@@ -524,7 +558,8 @@ export class AudioManager {
     duration: number,
     type: OscillatorType,
     volume: number,
-    endFreq?: number
+    endFreq?: number,
+    channel: 'bgm' | 'sfx' = 'bgm'
   ): void {
     const ctx = this.ensureContext();
     if (!ctx || !this.masterGain) return;
@@ -544,13 +579,30 @@ export class AudioManager {
     gain.gain.linearRampToValueAtTime(0.0001, startTime + duration);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    const dest = channel === 'sfx' ? (this.sfxGain ?? this.masterGain) : (this.bgmGain ?? this.masterGain);
+    gain.connect(dest);
 
     osc.start(startTime);
     osc.stop(startTime + duration + 0.01);
   }
 
-  private playNoiseBurst(startTime: number, duration: number, volume: number): void {
+  private playSfxTone(
+    freq: number,
+    startTime: number,
+    duration: number,
+    type: OscillatorType,
+    volume: number,
+    endFreq?: number
+  ): void {
+    this.playTone(freq, startTime, duration, type, volume, endFreq, 'sfx');
+  }
+
+  private playNoiseBurst(
+    startTime: number,
+    duration: number,
+    volume: number,
+    channel: 'bgm' | 'sfx' = 'sfx'
+  ): void {
     const ctx = this.ensureContext();
     if (!ctx || !this.masterGain) return;
 
@@ -573,14 +625,16 @@ export class AudioManager {
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
     noise.connect(gain);
-    gain.connect(this.masterGain);
+    const dest = channel === 'sfx' ? (this.sfxGain ?? this.masterGain) : (this.bgmGain ?? this.masterGain);
+    gain.connect(dest);
     noise.start(startTime);
   }
 
   private playSequence(
     notes: Array<{ note: string; dur: number; harmony?: string }>,
     type: OscillatorType = 'square',
-    volume = 0.16
+    volume = 0.16,
+    channel: 'bgm' | 'sfx' = 'sfx'
   ): number {
     const ctx = this.ensureContext();
     if (!ctx) return 0;
@@ -590,12 +644,12 @@ export class AudioManager {
     for (const item of notes) {
       const f = NOTE_FREQS[item.note] || 0;
       if (f > 0) {
-        this.playTone(f, t, item.dur * 0.9, type, volume);
+        this.playTone(f, t, item.dur * 0.9, type, volume, undefined, channel);
       }
       if (item.harmony) {
         const hf = NOTE_FREQS[item.harmony] || 0;
         if (hf > 0) {
-          this.playTone(hf, t, item.dur * 0.9, 'triangle', volume * 0.75);
+          this.playTone(hf, t, item.dur * 0.9, 'triangle', volume * 0.75, undefined, channel);
         }
       }
       t += item.dur;
@@ -616,60 +670,60 @@ export class AudioManager {
 
     switch (sfx) {
       case 'cursor':
-        this.playTone(880, now, 0.035, 'square', 0.09);
+        this.playSfxTone(880, now, 0.035, 'square', 0.09);
         break;
 
       case 'confirm':
-        this.playTone(659.25, now, 0.045, 'square', 0.12);
-        this.playTone(987.77, now + 0.045, 0.07, 'square', 0.12);
+        this.playSfxTone(659.25, now, 0.045, 'square', 0.12);
+        this.playSfxTone(987.77, now + 0.045, 0.07, 'square', 0.12);
         break;
 
       case 'cancel':
-        this.playTone(523.25, now, 0.045, 'square', 0.11);
-        this.playTone(392.0, now + 0.045, 0.065, 'square', 0.11);
+        this.playSfxTone(523.25, now, 0.045, 'square', 0.11);
+        this.playSfxTone(392.0, now + 0.045, 0.065, 'square', 0.11);
         break;
 
       case 'error':
-        this.playTone(164.81, now, 0.08, 'sawtooth', 0.14);
-        this.playTone(130.81, now + 0.09, 0.12, 'sawtooth', 0.14);
+        this.playSfxTone(164.81, now, 0.08, 'sawtooth', 0.14);
+        this.playSfxTone(130.81, now + 0.09, 0.12, 'sawtooth', 0.14);
         break;
 
       case 'stairs':
-        this.playTone(440, now, 0.05, 'triangle', 0.14, 220);
-        this.playTone(330, now + 0.06, 0.06, 'triangle', 0.14, 165);
+        this.playSfxTone(440, now, 0.05, 'triangle', 0.14, 220);
+        this.playSfxTone(330, now + 0.06, 0.06, 'triangle', 0.14, 165);
         break;
 
       case 'door':
         // Estalo do trinco seguido pelo ranger/abrir da porta em 8-bit
         this.playNoiseBurst(now, 0.035, 0.14);
-        this.playTone(150, now, 0.04, 'triangle', 0.16, 100);
-        this.playTone(180, now + 0.045, 0.085, 'sawtooth', 0.13, 330);
+        this.playSfxTone(150, now, 0.04, 'triangle', 0.16, 100);
+        this.playSfxTone(180, now + 0.045, 0.085, 'sawtooth', 0.13, 330);
         break;
 
       case 'coins':
-        this.playTone(987.77, now, 0.05, 'square', 0.14);
-        this.playTone(1318.51, now + 0.05, 0.16, 'square', 0.14);
+        this.playSfxTone(987.77, now, 0.05, 'square', 0.14);
+        this.playSfxTone(1318.51, now + 0.05, 0.16, 'square', 0.14);
         break;
 
       case 'attack':
         this.playNoiseBurst(now, 0.09, 0.18);
-        this.playTone(520, now, 0.09, 'square', 0.14, 140);
+        this.playSfxTone(520, now, 0.09, 'square', 0.14, 140);
         break;
 
       case 'crit':
         this.playNoiseBurst(now, 0.14, 0.24);
-        this.playTone(880, now, 0.06, 'square', 0.18, 220);
-        this.playTone(1174.66, now + 0.06, 0.12, 'square', 0.18, 293.66);
+        this.playSfxTone(880, now, 0.06, 'square', 0.18, 220);
+        this.playSfxTone(1174.66, now + 0.06, 0.12, 'square', 0.18, 293.66);
         break;
 
       case 'hit':
         this.playNoiseBurst(now, 0.12, 0.22);
-        this.playTone(196, now, 0.12, 'sawtooth', 0.18, 65);
+        this.playSfxTone(196, now, 0.12, 'sawtooth', 0.18, 65);
         break;
 
       case 'magic':
         for (let i = 0; i < 6; i++) {
-          this.playTone(440 + i * 110, now + i * 0.035, 0.05, 'square', 0.13);
+          this.playSfxTone(440 + i * 110, now + i * 0.035, 0.05, 'square', 0.13);
         }
         break;
 
@@ -688,7 +742,7 @@ export class AudioManager {
 
       case 'encounter':
         for (let i = 0; i < 5; i++) {
-          this.playTone(300 + i * 95, now + i * 0.04, 0.045, 'sawtooth', 0.16, 180 + i * 60);
+          this.playSfxTone(300 + i * 95, now + i * 0.04, 0.045, 'sawtooth', 0.16, 180 + i * 60);
         }
         break;
 

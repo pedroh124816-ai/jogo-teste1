@@ -8,6 +8,7 @@ import { DialogueBox } from '../engine/DialogueBox';
 import { MapScene } from './MapScene';
 import { gameState } from '../state/GameState';
 import { soundManager } from '../engine/AudioManager';
+import { getCutsceneCanvas } from '../assets/cutsceneGraphics';
 
 interface IntroSlide {
   title: string;
@@ -130,15 +131,29 @@ export class IntroScene implements Scene {
     const stageH = 118;
     renderer.drawWindow(stageX, stageY, stageW, stageH, NES_COLORS.BLACK);
 
-    // Renderiza a arte 8-bit procedural correspondente ao quadro atual
-    if (this.slideIndex === 0) {
-      this.renderSlideDarkness(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
-    } else if (this.slideIndex === 1) {
-      this.renderSlideCastleLight(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
-    } else if (this.slideIndex === 2) {
-      this.renderSlideMedallion(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+    // Renderiza arte da cutscene dedicada se disponível, ou arte procedural
+    const cutsceneId =
+      this.slideIndex === 0
+        ? 'intro_grande_treva'
+        : this.slideIndex === 1
+        ? 'intro_grande_lume'
+        : null;
+    const canvas = cutsceneId ? getCutsceneCanvas(cutsceneId, Math.floor(this.timer / 30)) : null;
+
+    if (canvas) {
+      const imgX = stageX + Math.floor((stageW - canvas.width) / 2);
+      const imgY = stageY + Math.floor((stageH - canvas.height) / 2);
+      renderer.ctx.drawImage(canvas, imgX, imgY);
     } else {
-      this.renderSlideThroneCall(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+      if (this.slideIndex === 0) {
+        this.renderSlideDarkness(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+      } else if (this.slideIndex === 1) {
+        this.renderSlideCastleLight(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+      } else if (this.slideIndex === 2) {
+        this.renderSlideMedallion(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+      } else {
+        this.renderSlideThroneCall(renderer, stageX + 8, stageY + 8, stageW - 16, stageH - 16);
+      }
     }
 
     // Dica discreta de pular abertura
@@ -160,7 +175,7 @@ export class IntroScene implements Scene {
   }
 
   /**
-   * Quadro 1: Cordilheiras cinzas sob o céu noturno e fendas da Grande Treva.
+   * Quadro 1: A Grande Treva cobrindo a terra (vinheta cinematográfica retrô 128x72).
    */
   private renderSlideDarkness(
     renderer: Renderer,
@@ -171,41 +186,18 @@ export class IntroScene implements Scene {
   ): void {
     renderer.fillRect(x, y, w, h, NES_COLORS.NAVY_BLUE);
     this.renderStars(renderer);
-
-    // Silhueta de montanhas escarpadas
-    for (let i = 0; i < 6; i++) {
-      const peakX = x + 18 + i * 34;
-      const peakH = 28 + (i % 2) * 10;
-      for (let row = 0; row < peakH; row++) {
-        const span = row * 2 + 2;
-        renderer.fillRect(
-          peakX - Math.floor(span / 2),
-          y + h - 24 - peakH + row,
-          span,
-          1,
-          row < 6 ? NES_COLORS.LIGHT_GRAY : NES_COLORS.DARK_GRAY
-        );
-      }
-    }
-
-    // Solo escuro com fendas pulsantes de sombra/lume
-    renderer.fillRect(x, y + h - 24, w, 24, NES_COLORS.BLACK);
-    const pulse = Math.floor(this.timer / 10) % 2 === 0;
-    const fissureColor = pulse ? NES_COLORS.RED : NES_COLORS.DARK_BROWN;
-    renderer.fillRect(x + 44, y + h - 18, 38, 2, fissureColor);
-    renderer.fillRect(x + 78, y + h - 16, 46, 3, fissureColor);
-    renderer.fillRect(x + 120, y + h - 19, 42, 2, fissureColor);
-
-    // Partículas de treva subindo
-    for (let i = 0; i < 10; i++) {
-      const px = x + 36 + i * 14;
-      const py = y + h - 20 - ((this.timer + i * 9) % 44);
-      renderer.fillRect(px, py, 2, 2, i % 2 === 0 ? NES_COLORS.RED : NES_COLORS.MED_GRAY);
+    const frame = Math.floor(this.timer / 20) % 2;
+    const canvas = getCutsceneCanvas('intro_grande_treva', frame);
+    if (canvas) {
+      const cx = x + Math.floor((w - 128) / 2);
+      const cy = y + Math.floor((h - 72) / 2);
+      renderer.drawWindow(cx - 3, cy - 3, 128 + 6, 72 + 6, NES_COLORS.NAVY_BLUE);
+      renderer.ctx.drawImage(canvas, cx, cy);
     }
   }
 
   /**
-   * Quadro 2: O Castelo Real de Luminário irradiando o feixe dourado do Lume Real.
+   * Quadro 2: O Grande Lume no Topo do Castelo (vinheta cinematográfica retrô 128x72).
    */
   private renderSlideCastleLight(
     renderer: Renderer,
@@ -216,33 +208,14 @@ export class IntroScene implements Scene {
   ): void {
     renderer.fillRect(x, y, w, h, NES_COLORS.DARK_BLUE);
     this.renderStars(renderer);
-
-    const cx = x + Math.floor(w / 2);
-    const beamW = 16 + Math.floor(Math.sin(this.timer * 0.1) * 4);
-
-    // Feixe vertical dourado subindo do Castelo
-    renderer.fillRect(cx - Math.floor(beamW / 2) - 6, y, beamW + 12, h - 20, NES_COLORS.BROWN);
-    renderer.fillRect(cx - Math.floor(beamW / 2), y, beamW, h - 20, NES_COLORS.GOLD);
-    renderer.fillRect(cx - 3, y, 6, h - 20, NES_COLORS.WHITE);
-
-    // Colinas verdes na base
-    renderer.fillRect(x, y + h - 22, w, 22, NES_COLORS.FOREST_GREEN);
-    renderer.fillRect(x, y + h - 18, w, 18, NES_COLORS.GRASS_GREEN);
-
-    // Usa os próprios sprites do Castelo Real em miniatura no centro
-    const tTop = this.assetManager.getTile('castle_tower_top');
-    const kTop = this.assetManager.getTile('castle_keep_top');
-    const tBase = this.assetManager.getTile('castle_tower_base');
-    const gate = this.assetManager.getTile('castle_gate');
-
-    const castleX = cx - 24;
-    const castleY = y + h - 46;
-    renderer.drawSprite(tTop, castleX, castleY);
-    renderer.drawSprite(kTop, castleX + 16, castleY);
-    renderer.drawSprite(tTop, castleX + 32, castleY);
-    renderer.drawSprite(tBase, castleX, castleY + 16);
-    renderer.drawSprite(gate, castleX + 16, castleY + 16);
-    renderer.drawSprite(tBase, castleX + 32, castleY + 16);
+    const frame = Math.floor(this.timer / 20) % 2;
+    const canvas = getCutsceneCanvas('intro_grande_lume', frame);
+    if (canvas) {
+      const cx = x + Math.floor((w - 128) / 2);
+      const cy = y + Math.floor((h - 72) / 2);
+      renderer.drawWindow(cx - 3, cy - 3, 128 + 6, 72 + 6, NES_COLORS.DARK_BLUE);
+      renderer.ctx.drawImage(canvas, cx, cy);
+    }
   }
 
   /**

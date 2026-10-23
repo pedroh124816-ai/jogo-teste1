@@ -8,7 +8,7 @@ import { gameState } from '../state/GameState';
 import { getItemDef } from '../data/items';
 import { soundManager } from '../engine/AudioManager';
 
-type MenuMode = 'commands' | 'status' | 'items' | 'message';
+type MenuMode = 'commands' | 'status' | 'items' | 'options' | 'message';
 
 export class MenuScene implements Scene {
   public readonly name = 'MenuScene';
@@ -21,9 +21,10 @@ export class MenuScene implements Scene {
   private selectedIndex = 0;
   private itemCursor = 0;
   private itemScroll = 0;
+  private optionsCursor = 0;
   private readonly maxVisibleItems = 5;
 
-  private commands = ['FALAR', 'STATUS', 'ITENS', 'MAPA', 'MAGIA', 'SALVAR'];
+  private commands = ['FALAR', 'STATUS', 'ITENS', 'MAPA', 'MAGIA', 'OPÇÕES', 'SALVAR'];
 
   private messageDialogText: string | null = null;
   private returnModeAfterMessage: MenuMode = 'commands';
@@ -117,7 +118,64 @@ export class MenuScene implements Scene {
       return;
     }
 
-    // 4. Navegação na janela principal de COMANDOS
+    // 4. Sub-menu interativo de OPÇÕES
+    if (this.mode === 'options') {
+      if (this.input.wasPressed('cancel')) {
+        soundManager.playSfx('cancel');
+        this.mode = 'commands';
+        return;
+      }
+
+      if (this.input.wasPressed('up')) {
+        this.optionsCursor = (this.optionsCursor - 1 + 4) % 4;
+        soundManager.playSfx('cursor');
+      } else if (this.input.wasPressed('down')) {
+        this.optionsCursor = (this.optionsCursor + 1) % 4;
+        soundManager.playSfx('cursor');
+      }
+
+      if (this.optionsCursor === 0) {
+        if (this.input.wasPressed('left')) {
+          gameState.settings.bgmVolume = Math.max(0, gameState.settings.bgmVolume - 20);
+          soundManager.setBgmVolume(gameState.settings.bgmVolume / 100);
+          soundManager.playSfx('cursor');
+        } else if (this.input.wasPressed('right')) {
+          gameState.settings.bgmVolume = Math.min(100, gameState.settings.bgmVolume + 20);
+          soundManager.setBgmVolume(gameState.settings.bgmVolume / 100);
+          soundManager.playSfx('cursor');
+        }
+      } else if (this.optionsCursor === 1) {
+        if (this.input.wasPressed('left')) {
+          gameState.settings.sfxVolume = Math.max(0, gameState.settings.sfxVolume - 20);
+          soundManager.setSfxVolume(gameState.settings.sfxVolume / 100);
+          soundManager.playSfx('cursor');
+        } else if (this.input.wasPressed('right')) {
+          gameState.settings.sfxVolume = Math.min(100, gameState.settings.sfxVolume + 20);
+          soundManager.setSfxVolume(gameState.settings.sfxVolume / 100);
+          soundManager.playSfx('cursor');
+        }
+      } else if (this.optionsCursor === 2) {
+        const speeds: Array<'normal' | 'fast' | 'instant'> = ['normal', 'fast', 'instant'];
+        const currentIdx = speeds.indexOf(gameState.settings.textSpeed);
+        if (this.input.wasPressed('left')) {
+          const nextIdx = (currentIdx - 1 + speeds.length) % speeds.length;
+          gameState.settings.textSpeed = speeds[nextIdx];
+          soundManager.playSfx('cursor');
+        } else if (this.input.wasPressed('right')) {
+          const nextIdx = (currentIdx + 1) % speeds.length;
+          gameState.settings.textSpeed = speeds[nextIdx];
+          soundManager.playSfx('cursor');
+        }
+      } else if (this.optionsCursor === 3) {
+        if (this.input.wasPressed('confirm')) {
+          soundManager.playSfx('cancel');
+          this.mode = 'commands';
+        }
+      }
+      return;
+    }
+
+    // 5. Navegação na janela principal de COMANDOS
     if (this.input.wasPressed('up')) {
       this.selectedIndex = (this.selectedIndex - 1 + this.commands.length) % this.commands.length;
       soundManager.playSfx('cursor');
@@ -205,6 +263,13 @@ export class MenuScene implements Scene {
         return;
       }
 
+      if (cmd === 'OPÇÕES') {
+        soundManager.playSfx('confirm');
+        this.optionsCursor = 0;
+        this.mode = 'options';
+        return;
+      }
+
       if (cmd === 'SALVAR') {
         soundManager.playSfx('coins');
         gameState.saveGame();
@@ -245,7 +310,7 @@ export class MenuScene implements Scene {
     const winX = 8;
     const winY = 8;
     const winW = 88;
-    const winH = 114;
+    const winH = 128;
 
     renderer.drawWindow(winX, winY, winW, winH, NES_COLORS.BLACK);
     renderer.drawText('COMANDOS', winX + 12, winY + 8, { color: NES_COLORS.PALE_GREEN });
@@ -288,7 +353,12 @@ export class MenuScene implements Scene {
       this.renderItemsWindow(renderer);
     }
 
-    // 5. Caixa de mensagem inferior (quando ativa)
+    // 5. Janela interativa de OPÇÕES
+    if (this.mode === 'options') {
+      this.renderOptionsWindow(renderer);
+    }
+
+    // 6. Caixa de mensagem inferior (quando ativa)
     if (this.mode === 'message' && this.messageDialogText !== null) {
       const msgX = 8;
       const msgY = 152;
@@ -388,5 +458,47 @@ export class MenuScene implements Scene {
         lineHeight: 12,
       });
     }
+  }
+
+  private renderOptionsWindow(renderer: Renderer): void {
+    const ox = 8;
+    const oy = 90;
+    const ow = 240;
+    const oh = 126;
+
+    renderer.drawWindow(ox, oy, ow, oh, NES_COLORS.BLACK);
+    renderer.drawText('AJUSTES E CONFIGURAÇÃO', ox + 12, oy + 8, { color: NES_COLORS.PALE_GREEN });
+    renderer.fillRect(ox + 8, oy + 18, ow - 16, 1, NES_COLORS.WHITE);
+
+    const speedLabels = {
+      normal: 'NORMAL',
+      fast: 'RÁPIDO',
+      instant: 'INSTÂNT',
+    };
+
+    const optRows = [
+      `MÚSICA BGM:   ◄ ${gameState.settings.bgmVolume}% ►`,
+      `EFEITOS SFX:  ◄ ${gameState.settings.sfxVolume}% ►`,
+      `TEXTO:        ◄ ${speedLabels[gameState.settings.textSpeed]} ►`,
+      'VOLTAR AO MENU',
+    ];
+
+    for (let i = 0; i < optRows.length; i++) {
+      const rowY = oy + 28 + i * 18;
+      const isSelected = i === this.optionsCursor;
+
+      if (isSelected) {
+        const blink = Math.floor(this.cursorTimer / CONFIG.ui.cursorBlinkFrames) % 2 === 0;
+        if (blink) {
+          renderer.drawText('►', ox + 12, rowY, { color: NES_COLORS.GOLD });
+        }
+      }
+
+      const color = isSelected ? NES_COLORS.WHITE : NES_COLORS.LIGHT_GRAY;
+      renderer.drawText(optRows[i], ox + 24, rowY, { color });
+    }
+
+    renderer.fillRect(ox + 8, oy + 104, ow - 16, 1, NES_COLORS.DARK_GRAY);
+    renderer.drawText('Use ◄ ► para alterar o valor', ox + 12, oy + 110, { color: NES_COLORS.MED_GRAY });
   }
 }

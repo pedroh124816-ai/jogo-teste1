@@ -189,6 +189,19 @@
         17,
         17,
         1,
+        44,
+        13,
+        13,
+        15,
+        13,
+        13,
+        45,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         13,
         13,
@@ -197,19 +210,6 @@
         13,
         1,
         1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        13,
-        13,
-        15,
-        13,
-        13,
-        1,
-        1,
         17,
         17,
         1,
@@ -323,7 +323,7 @@
         16,
         1,
         1,
-        13,
+        44,
         19,
         15,
         13,
@@ -483,14 +483,14 @@
         15,
         13,
         13,
+        44,
         1,
-        1,
         16,
         16,
         16,
         16,
         1,
-        13,
+        45,
         19,
         15,
         13,
@@ -901,6 +901,73 @@
               "name": "dialogue",
               "type": "string",
               "value": "A ponte a oeste leva ao\nCastelo Real! No Bosque\nde Brasa há um estranho."
+            },
+            {
+              "name": "wanderRadius",
+              "type": "int",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "name": "Biscoito",
+          "type": "npc",
+          "x": 128,
+          "y": 224,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_dog"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "down"
+            },
+            {
+              "name": "wanderRadius",
+              "type": "int",
+              "value": 2
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Au! Au! Au!\n*Biscoito abana o rabo com\nentusiasmo e lambe sua bota!*"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "name": "Mimi",
+          "type": "npc",
+          "x": 208,
+          "y": 176,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "sprite",
+              "type": "string",
+              "value": "npc_cat"
+            },
+            {
+              "name": "direction",
+              "type": "string",
+              "value": "left"
+            },
+            {
+              "name": "wanderRadius",
+              "type": "int",
+              "value": 2
+            },
+            {
+              "name": "dialogue",
+              "type": "string",
+              "value": "Miau... Ronron...\n*A gatinha tricolor se esfrega\nnas suas pernas e ronrona.*"
             }
           ]
         }

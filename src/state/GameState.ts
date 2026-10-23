@@ -1,5 +1,12 @@
 import { getItemDef, ItemDef } from '../data/items';
 import { StoryFlags, BooleanFlagKey } from './StoryFlags';
+import { soundManager } from '../engine/AudioManager';
+
+export interface GameSettings {
+  bgmVolume: number; // 0 a 100
+  sfxVolume: number; // 0 a 100
+  textSpeed: 'normal' | 'fast' | 'instant';
+}
 
 export interface InventorySlot {
   itemId: string;
@@ -91,6 +98,12 @@ export class GameState {
   public savedTileY = 6;
   public savedDir: 'up' | 'down' | 'left' | 'right' = 'up';
   public timeOfDay: 'day' | 'night' = 'day';
+
+  public settings: GameSettings = {
+    bgmVolume: 80,
+    sfxVolume: 100,
+    textSpeed: 'fast',
+  };
 
   private static readonly SAVE_KEY = 'lenda_luminario_save_v1';
   private static memorySaveFallback: string | null = null;
@@ -478,6 +491,7 @@ export class GameState {
       savedTileY: this.savedTileY,
       savedDir: this.savedDir,
       timeOfDay: this.timeOfDay,
+      settings: { ...this.settings },
     };
 
     const serialized = JSON.stringify(payload);
@@ -587,6 +601,17 @@ export class GameState {
       }
       if (data.timeOfDay === 'day' || data.timeOfDay === 'night') {
         this.timeOfDay = data.timeOfDay;
+      }
+      if (data.settings && typeof data.settings === 'object') {
+        this.settings = {
+          bgmVolume: typeof data.settings.bgmVolume === 'number' ? data.settings.bgmVolume : 80,
+          sfxVolume: typeof data.settings.sfxVolume === 'number' ? data.settings.sfxVolume : 100,
+          textSpeed: ['normal', 'fast', 'instant'].includes(data.settings.textSpeed)
+            ? data.settings.textSpeed
+            : 'fast',
+        };
+        soundManager.setBgmVolume(this.settings.bgmVolume / 100);
+        soundManager.setSfxVolume(this.settings.sfxVolume / 100);
       }
       return true;
     } catch {

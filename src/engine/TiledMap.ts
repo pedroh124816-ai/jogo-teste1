@@ -103,6 +103,7 @@ export interface MapNpcDef {
   setFlagOnTalk?: string;
   altFlag?: string;
   altDialogue?: string;
+  wanderRadius?: number;
 }
 
 export class TiledMap {
@@ -218,6 +219,12 @@ export class TiledMap {
         });
       } else if (obj.type === 'npc' || props['sprite']) {
         const flagToSet = props['setFlagOnTalk'] || props['setFlag'];
+        const wanderVal =
+          props['wanderRadius'] !== undefined
+            ? Number(props['wanderRadius'])
+            : props['wander']
+              ? 1
+              : undefined;
         this.npcs.push({
           id: `npc_${obj.id}`,
           name: String(props['name'] || obj.name || 'Aldeão'),
@@ -231,6 +238,7 @@ export class TiledMap {
           setFlagOnTalk: flagToSet ? String(flagToSet) : undefined,
           altFlag: props['altFlag'] ? String(props['altFlag']) : undefined,
           altDialogue: props['altDialogue'] ? String(props['altDialogue']) : undefined,
+          wanderRadius: wanderVal,
         });
       } else if (obj.type === 'chest' || props['item'] || props['gold']) {
         this.chests.push({

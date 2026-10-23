@@ -27,8 +27,8 @@ export class Player {
   private moveProgress = 0; // 0.0 a 1.0
   private startTileX: number;
   private startTileY: number;
-  private targetTileX: number;
-  private targetTileY: number;
+  public targetTileX: number;
+  public targetTileY: number;
 
   // Animação de caminhada
   private animFrame = 0;
@@ -129,9 +129,12 @@ export class Player {
       return;
     }
 
-    // 4. Testa colisão com NPCs sólidos
+    // 4. Testa colisão com NPCs sólidos (incluindo destino de quem está se movendo)
     for (const npc of npcs) {
-      if (npc.tileX === nextX && npc.tileY === nextY) {
+      if (
+        (npc.tileX === nextX && npc.tileY === nextY) ||
+        (npc.isMoving && npc.targetTileX === nextX && npc.targetTileY === nextY)
+      ) {
         return;
       }
     }

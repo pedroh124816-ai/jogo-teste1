@@ -356,6 +356,22 @@ export const TILE_DEFS: Record<string, TileDef> = {
     encounterRate: 0,
     spriteId: 'high_mountain',
   },
+  '6': {
+    id: 'barrel',
+    name: 'Barril',
+    solid: true,
+    kind: 'counter',
+    encounterRate: 0,
+    spriteId: 'barrel',
+  },
+  '7': {
+    id: 'pot',
+    name: 'Vaso de Barro',
+    solid: true,
+    kind: 'counter',
+    encounterRate: 0,
+    spriteId: 'pot',
+  },
 };
 
 /**
@@ -417,5 +433,7 @@ export const TILED_GID_ORDER: string[] = [
   'castle_tower_base',
   'castle_gate',
   'high_mountain',
+  'barrel',
+  'pot',
 ];
 

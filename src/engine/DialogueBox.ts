@@ -126,6 +126,12 @@ export class DialogueBox {
 
     // 1. Processo de revelação letra por letra
     if (!this.isCurrentPageComplete) {
+      if (gameState.settings?.textSpeed === 'instant') {
+        this.visibleCharCount = currentText.length;
+        this.isCurrentPageComplete = true;
+        return;
+      }
+
       // Se o jogador pressionar Confirmar ou Cancelar enquanto digita, completa a página instantaneamente
       if (input.wasPressed('confirm') || input.wasPressed('cancel')) {
         this.visibleCharCount = currentText.length;
@@ -133,8 +139,13 @@ export class DialogueBox {
         return;
       }
 
+      const framesPerChar =
+        gameState.settings?.textSpeed === 'fast'
+          ? 1
+          : CONFIG.ui.textFramesPerChar;
+
       this.charTimer++;
-      if (this.charTimer >= CONFIG.ui.textFramesPerChar) {
+      if (this.charTimer >= framesPerChar) {
         this.charTimer = 0;
         this.visibleCharCount++;
         if (this.visibleCharCount >= currentText.length) {

@@ -4,6 +4,7 @@ import { getItemDef, SHOP_CATALOGS } from '../src/data/items';
 import { getMonsterDef, getSpellDef, rollEncounterForTerrain } from '../src/data/monsters';
 import { DialogueBox } from '../src/engine/DialogueBox';
 import { CreditsScene } from '../src/scenes/CreditsScene';
+import { VignetteScene } from '../src/scenes/VignetteScene';
 import { soundManager } from '../src/engine/AudioManager';
 import { TiledMap } from '../src/engine/TiledMap';
 import { gameState } from '../src/state/GameState';
@@ -458,6 +459,28 @@ describe('Etapa 11 - Sistema de Ciclo Dia / Noite & Missoes Noturnas', () => {
 
     gameState.setTimeOfDay('day');
     expect(gameState.isNight()).toBe(false);
+  });
+});
+
+describe('Etapa 12 - Motor de Cutscenes / Vinhetas em Pixel Art', () => {
+  it('instancia e executa Vinhetas para marcos emocionais', () => {
+    let finished = false;
+    const dummySceneManager = { pop: () => {}, push: () => {} } as any;
+    const dummyInput = { isDown: () => false, wasPressed: () => false } as any;
+
+    const v = new VignetteScene(
+      dummySceneManager,
+      dummyInput,
+      'tavo_morte',
+      'Mestre Tavo',
+      ['Ultimas palavras de Tavo'],
+      () => {
+        finished = true;
+      }
+    );
+    expect(v.name).toBe('VignetteScene');
+    v.enter();
+    v.update();
   });
 });
 

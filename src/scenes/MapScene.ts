@@ -16,6 +16,7 @@ import { WorldMapScene } from './WorldMapScene';
 import { ShopScene } from './ShopScene';
 import { InnScene } from './InnScene';
 import { CreditsScene } from './CreditsScene';
+import { VignetteScene } from './VignetteScene';
 import { Direction } from '../assets/heroGraphics';
 import { MAP_REGISTRY } from '../data/maps';
 import { gameState } from '../state/GameState';
@@ -283,10 +284,22 @@ export class MapScene implements Scene {
               gameState.setFlag('fera_derrotada', true);
               gameState.setFlag('pulseira_ulan_vista', true);
               gameState.addItem('pulseira_antiga', 1);
-              this.dialogueBox.start(
-                'Ulan, a Fera',
-                '...Aneth?\n---\nPerdoe... não pude\nguardar a porta...\n---\nNo pulso da fera brilha\numa Pulseira Antiga com\no símbolo do seu Medalhão!\n---\nVolte ao Castelo Real e\nrelate tudo ao Rei Auren.'
+              const vignette = new VignetteScene(
+                this.sceneManager,
+                this.input,
+                'ulan_ultimo_suspiro',
+                'Ulan, o Guardião',
+                [
+                  '...Aneth?\nPerdoe-me...',
+                  'Não pude guardar a porta...\nO lume me consumiu...',
+                  'No pulso da fera caída brilha\numa Pulseira Antiga com o\nsímbolo do seu Medalhão!',
+                  'Volte ao Castelo Real e\nrelate tudo ao Rei Auren.',
+                ],
+                () => {
+                  this.sceneManager.pop();
+                }
               );
+              this.sceneManager.push(vignette);
             }
           )
         );
@@ -600,10 +613,22 @@ export class MapScene implements Scene {
                 gameState.setFlag('daros_derrotado', true);
                 gameState.setFlag('ponte_destruida', true);
                 gameState.setFlag('ato3_concluido', true);
-                this.dialogueBox.start(
-                  'QUEDA DE COBRE-ALTO',
-                  'Daros tomba! As tropas de\nAuren tomam a fortaleza\nem chamas!\n---\nPríncipe Dagan escapa e\ndestrói a Ponte de Cobre!\n---\nVolte ao Castelo Real e\nconfronte o Rei Auren!\n[FIM DO ATO 3]'
+                const vignette = new VignetteScene(
+                  this.sceneManager,
+                  this.input,
+                  'queda_ponte_cobre',
+                  'Príncipe Dagan',
+                  [
+                    'Rei Daros tomba! As tropas de\nAuren tomam a fortaleza\nem chamas ardentes!',
+                    'Você nos traiu, [NOME]!\nEu recebi você como um irmão!',
+                    'Dagan corta os cabos da\nPonte de Cobre e foge para\nas montanhas do norte!',
+                    'Volte ao Castelo Real e\nconfronte o Rei Auren!\n[FIM DO ATO 3]',
+                  ],
+                  () => {
+                    this.sceneManager.pop();
+                  }
                 );
+                this.sceneManager.push(vignette);
               }
             )
           );
@@ -614,14 +639,24 @@ export class MapScene implements Scene {
 
     // 1.6 Ato 4: Mestre Tavo, Capitã Marta, Sael, Orun, Príncipe Dagan e Lorde Vael
     if (npc.name === 'Mestre Tavo' && this.currentMapId === 'castelo') {
-      this.dialogueBox.start(
-        npc.name,
-        npc.getActiveDialogue(),
+      const vignette = new VignetteScene(
+        this.sceneManager,
+        this.input,
+        'tavo_morte',
+        'Mestre Tavo',
+        [
+          '[NOME]... a prova está\nno meu alforje.\nNão confie em Vael...',
+          'Não foi um monstro.\nFoi só pura conveniência,\ne todos obedeceram...',
+          'Tavo respira com dificuldade\ne fecha os olhos para sempre\nnos degraus do palácio.',
+          'Confronte o Rei Auren no\nSalão do Trono e exija a\nverdade sobre Luminário!',
+        ],
         () => {
           gameState.setFlag('tavo_morto', true);
           npc.resetDirection();
+          this.sceneManager.pop();
         }
       );
+      this.sceneManager.push(vignette);
       return;
     }
 
@@ -1188,7 +1223,99 @@ export class MapScene implements Scene {
       }
     }
 
+    // 6. Interação com elementos interativos de cenário (barris, vasos, estantes de livros)
+    if (facingTile && (facingTile.id === 'barrel' || facingTile.id === 'pot' || facingTile.id === 'bookshelf')) {
+      this.interactWithScenery(facingTile.id, facing.x, facing.y);
+      return true;
+    }
+
     return false;
+  }
+
+  /**
+   * Vasculha objetos do cenário por moedas, itens e notas históricas
+   */
+  private interactWithScenery(tileId: string, tileX: number, tileY: number): void {
+    const flagKey = `scenery_${this.currentMapId}_${tileX}_${tileY}`;
+
+    if (tileId === 'barrel') {
+      if (gameState.getFlag(flagKey)) {
+        soundManager.playSfx('cancel');
+        this.dialogueBox.start('BARRIL', 'Você vasculhou o barril.\nNão há mais nada aqui.');
+        return;
+      }
+      gameState.setFlag(flagKey, true);
+      const roll = (tileX * 7 + tileY * 13) % 4;
+      if (roll === 0) {
+        soundManager.playSfx('coins');
+        const gold = 6 + (tileX % 7);
+        gameState.addGold(gold);
+        this.dialogueBox.start('BARRIL', `Você revistou o barril e\nencontrou ${gold} Moedas de Ouro!`);
+      } else if (roll === 1) {
+        soundManager.playSfx('chest');
+        gameState.addItem('erva_medicinal', 1);
+        this.dialogueBox.start('BARRIL', 'Você revistou o barril e\nencontrou uma Erva Medicinal!');
+      } else if (roll === 2) {
+        soundManager.playSfx('coins');
+        const gold = 10;
+        gameState.addGold(gold);
+        this.dialogueBox.start('BARRIL', 'No fundo do barril havia\n10 Moedas de Ouro esquecidas!');
+      } else {
+        soundManager.playSfx('cursor');
+        this.dialogueBox.start('BARRIL', 'O barril de carvalho contém\napenas maçãs secas e água.');
+      }
+      return;
+    }
+
+    if (tileId === 'pot') {
+      if (gameState.getFlag(flagKey)) {
+        soundManager.playSfx('cancel');
+        this.dialogueBox.start('VASO', 'Um vaso de barro vazio.');
+        return;
+      }
+      gameState.setFlag(flagKey, true);
+      const roll = (tileX * 11 + tileY * 5) % 4;
+      if (roll === 0) {
+        soundManager.playSfx('coins');
+        const gold = 5 + (tileY % 8);
+        gameState.addGold(gold);
+        this.dialogueBox.start('VASO', `Você espiou dentro do vaso e\nencontrou ${gold} Moedas de Ouro!`);
+      } else if (roll === 1) {
+        soundManager.playSfx('chest');
+        gameState.addItem('pocao_vida', 1);
+        this.dialogueBox.start('VASO', 'Dentro do vaso de barro havia\num frasco de Poção de Vida!');
+      } else {
+        soundManager.playSfx('cursor');
+        this.dialogueBox.start('VASO', 'Você espiou o interior do\nvaso, mas só havia poeira\ne sementes secas.');
+      }
+      return;
+    }
+
+    if (tileId === 'bookshelf') {
+      soundManager.playSfx('cursor');
+      if (this.currentMapId === 'castelo') {
+        this.dialogueBox.start(
+          'ESTANTE REAL',
+          'Crônicas do Reino de Luminário:\n"O Grande Lume ardeu por eras\nno topo da torre central...\n---\n...guiando viajantes e afastando\nas criaturas das trevas que\nhabitam os ermos do mundo."'
+        );
+      } else if (this.currentMapId === 'templo_coracao' || this.currentMapId === 'santuario') {
+        this.dialogueBox.start(
+          'ESTANTE ANTIGA',
+          'Escrituras Arcanas:\n"Três virtudes sustentam a luz:\nCoragem no aço, sabedoria no\nespírito e piedade no coração."'
+        );
+      } else if (this.currentMapId === 'cabana_orun') {
+        this.dialogueBox.start(
+          'ESTANTE DO EREMITA',
+          'Anotações de Mestre Orun:\n"As ervas dos vales curam a carne,\nmas a vontade do herói cura\no próprio destino da terra."'
+        );
+      } else {
+        this.dialogueBox.start(
+          'ESTANTE',
+          'Tomos encadernados em couro:\nReceitas medicinais, cartas\nmarítimas e lendas sobre os\nheróis do passado.'
+        );
+      }
+      return;
+    }
   }
 
   /**
@@ -1370,8 +1497,18 @@ export class MapScene implements Scene {
       return;
     }
 
-    // 5. Atualiza o jogador no grid com checagem de colisão (mapa + NPCs visíveis)
+    // 5. Atualiza o jogador e os NPCs no grid com checagem mútua de colisão
     const visibleNpcs = this.npcs.filter((n) => n.isVisible());
+    for (const npc of visibleNpcs) {
+      npc.update(
+        this.currentMap,
+        visibleNpcs,
+        this.player.tileX,
+        this.player.tileY,
+        this.player.isMoving ? this.player.targetTileX : undefined,
+        this.player.isMoving ? this.player.targetTileY : undefined
+      );
+    }
     this.player.update(this.input, this.currentMap, visibleNpcs);
     this.currentMap.update();
 
