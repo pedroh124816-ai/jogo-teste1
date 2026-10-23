@@ -52,6 +52,7 @@ export class MapScene implements Scene {
   // Estado de transição entre mapas (Warp com Fade)
   private warpState: WarpState = 'none';
   private warpProgress = 0;
+  private quakeTimer = 0;
   private pendingWarp: PendingWarp | null = null;
 
   private showDebug: boolean = CONFIG.debug.overlayOnStart;
@@ -140,11 +141,14 @@ export class MapScene implements Scene {
 
     // Alterações dinâmicas de terreno no overworld conforme progressão de Atos
     if (mapId === 'overworld') {
-      // Ato 2: Ponte do Sul (48, 68..70) e Passo do Santuário (82, 41..43) só abrem após concluir o Ato 1 (Selo Real)
+      // Ato 2: Ponte do Sul (48, 68..70) abre após concluir o Ato 1 (Selo Real);
+      // o Passo do Santuário (82, 41..43) só desaba no Terremoto que se segue.
       if (!gameState.getFlag('ato1_concluido')) {
         this.currentMap.setTileAt(48, 68, 'water');
         this.currentMap.setTileAt(48, 69, 'water');
         this.currentMap.setTileAt(48, 70, 'water');
+      }
+      if (!gameState.getFlag('ato1_concluido') || !gameState.getFlag('terremoto_visto')) {
         this.currentMap.setTileAt(82, 41, 'high_mountain');
         this.currentMap.setTileAt(82, 42, 'high_mountain');
         this.currentMap.setTileAt(82, 43, 'high_mountain');
@@ -1482,6 +1486,24 @@ export class MapScene implements Scene {
       return;
     }
 
+    // 3.1 Evento do Terremoto (pós-Ato 1): o Passo do Santuário desaba e abre caminho
+    if (this.quakeTimer > 0) {
+      this.quakeTimer--;
+      if (this.quakeTimer % 14 === 0) soundManager.playSfx('hit');
+      if (this.quakeTimer === 0) this.finishEarthquake();
+      return;
+    }
+    if (
+      this.currentMapId === 'overworld' &&
+      gameState.getFlag('ato1_concluido') &&
+      !gameState.getFlag('terremoto_visto') &&
+      !this.player.isMoving
+    ) {
+      gameState.setFlag('terremoto_visto', true);
+      this.quakeTimer = 150;
+      return;
+    }
+
     // 4. Interação quando parado: Falar com NPC/Placa/Baú ou Abrir Menu
     if (!this.player.isMoving && this.input.wasPressed('confirm')) {
       const talked = this.tryTalkToNpc();
@@ -1663,9 +1685,30 @@ export class MapScene implements Scene {
     }
   }
 
+  /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e narra o evento. */
+  private finishEarthquake(): void {
+    const original = new TiledMap('overworld', MAP_REGISTRY['overworld'].json);
+    for (let y = 41; y <= 43; y++) {
+      const def = original.getTileAt(82, y);
+      if (def) this.currentMap.setTileAt(82, y, def.id);
+    }
+    soundManager.playSfx('stairs');
+    this.dialogueBox.start(
+      'TERREMOTO',
+      'O chão treme com força!\nAs montanhas a leste\ndesabam num estrondo!\n---\nUm caminho se abriu no\nPasso do Santuário, e a\nponte ao sul está livre!\n---\nSiga ao sul até o Porto\ndo Sol, como o Rei pediu!'
+    );
+  }
+
   public render(renderer: Renderer): void {
     // 1. Limpa tela com fundo preto (interiores menores ficam centralizados com fundo preto)
     renderer.clear(NES_COLORS.BLACK);
+
+    // Tremor de tela durante o terremoto
+    const shaking = this.quakeTimer > 0;
+    if (shaking) {
+      renderer.ctx.save();
+      renderer.ctx.translate(Math.round((Math.random() - 0.5) * 6), Math.round((Math.random() - 0.5) * 6));
+    }
 
     // 2. Renderiza tiles visíveis do mapa
     this.currentMap.render(renderer, this.camera, this.assetManager);
@@ -1679,6 +1722,8 @@ export class MapScene implements Scene {
 
     // 4. Renderiza o herói
     this.player.render(renderer, this.camera, this.assetManager);
+
+    if (shaking) renderer.ctx.restore();
 
     // 4.1 Filtro de luar noturno estilo 8-bit (aplica-se a mapas exteriores e cidades durante a noite)
     if (gameState.isNight() && this.currentMap.mapType !== 'caverna') {
