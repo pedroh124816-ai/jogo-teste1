@@ -428,6 +428,54 @@ export class MapScene implements Scene {
       return;
     }
 
+    // 0.91 Missão Secundária Noturna de Porto do Sol: O Farol Apagado
+    if (npc.name === 'Faroleiro Bartô') {
+      if (gameState.getFlag('farol_reaceso')) {
+        this.dialogueBox.start(
+          npc.name,
+          'A chama do Farol está firme\ne reluzente sobre a baía!\n---\nOs marinheiros e caravelas\nestão a salvo da escuridão!\nObrigado pelo socorro, [NOME]!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      if (!gameState.isNight()) {
+        this.dialogueBox.start(
+          npc.name,
+          'Olá, aventureiro! Mantenho o\nFarol do Sol preparado para guiar\nos navios nas noites de bruma.\n---\nQuando a noite cai, a cerração\ndo mar torna os recifes traiçoeiros!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      // Durante a NOITE com farol apagado
+      if (gameState.getItemQuantity('tocha') > 0) {
+        this.dialogueBox.start(
+          npc.name,
+          'Céus! Uma rajada de vento\napagou a chama do Farol!\n---\nVocê tem uma Tocha aí!\nAjude-me a reacender o braseiro!',
+          () => {
+            gameState.removeItem('tocha', 1);
+            gameState.setFlag('farol_reaceso', true);
+            gameState.addGold(60);
+            soundManager.playSfx('magic');
+            npc.resetDirection();
+            this.dialogueBox.start(
+              'Faroleiro Bartô',
+              'O braseiro arde em glória!\nA luz volta a rasgar a cerração\nda baía do Porto do Sol!\n---\nTome 60 Moedas de Ouro pelo\nseu auxílio valoroso, [NOME]!'
+            );
+          }
+        );
+        return;
+      }
+
+      this.dialogueBox.start(
+        npc.name,
+        'Céus! Uma rajada de vento\napagou a chama do Farol!\n---\nPreciso de uma Tocha para\nreacender o braseiro antes\nque algum navio colida!\n---\nVocê pode comprar Tochas com o\nmercador ou revistar barris!',
+        () => npc.resetDirection()
+      );
+      return;
+    }
+
     // 0.95 Cadeia secundária do Balão: Zéfiro, o Inventor (Porto do Sol)
     if (npc.name === 'Zéfiro, o Inventor') {
       const say = (text: string, after?: () => void) =>
