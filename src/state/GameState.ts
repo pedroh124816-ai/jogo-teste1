@@ -111,7 +111,29 @@ export class GameState {
   };
 
   private static readonly SAVE_KEY = 'lenda_luminario_save_v1';
-  private static memorySaveFallback: string | null = null;
+  public static readonly SLOT_COUNT = 3;
+  private static memorySaveFallback: Record<number, string | null> = { 1: null, 2: null, 3: null };
+
+  /** Slot de save ativo (1 a 3). Não é zerado por reset(). */
+  public currentSlot = 1;
+
+  private static slotKey(slot: number): string {
+    // Slot 1 mantém a chave antiga para preservar saves já existentes
+    return slot === 1 ? GameState.SAVE_KEY : `${GameState.SAVE_KEY}_slot${slot}`;
+  }
+
+  private static readRaw(slot: number): string | null {
+    let raw: string | null = GameState.memorySaveFallback[slot] ?? null;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const fromStorage = window.localStorage.getItem(GameState.slotKey(slot));
+        if (fromStorage) raw = fromStorage;
+      }
+    } catch {
+      // usa fallback em memória
+    }
+    return raw;
+  }
 
   constructor() {
     this.reset();
@@ -531,10 +553,10 @@ export class GameState {
     };
 
     const serialized = JSON.stringify(payload);
-    GameState.memorySaveFallback = serialized;
+    GameState.memorySaveFallback[this.currentSlot] = serialized;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(GameState.SAVE_KEY, serialized);
+        window.localStorage.setItem(GameState.slotKey(this.currentSlot), serialized);
       }
       return true;
     } catch {
@@ -542,48 +564,47 @@ export class GameState {
     }
   }
 
-  public hasSaveData(): boolean {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const raw = window.localStorage.getItem(GameState.SAVE_KEY);
-        if (raw) return true;
-      }
-    } catch {
-      // ignora erro de localStorage
-    }
-    return Boolean(GameState.memorySaveFallback);
-  }
-
-  public isGameCompleted(): boolean {
-    if (this.flags.get('jogo_concluido') || this.flags.get('final_b_coroa_vazia')) return true;
-    try {
-      let raw: string | null = GameState.memorySaveFallback;
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const fromStorage = window.localStorage.getItem(GameState.SAVE_KEY);
-        if (fromStorage) raw = fromStorage;
-      }
-      if (raw) {
-        const data = JSON.parse(raw);
-        if (data?.flags?.flags?.jogo_concluido || data?.flags?.flags?.final_b_coroa_vazia) {
-          return true;
-        }
-      }
-    } catch {
-      // ignora
+  /** Verifica se existe save no slot indicado (ou em qualquer slot, se omitido). */
+  public hasSaveData(slot?: number): boolean {
+    if (slot !== undefined) return Boolean(GameState.readRaw(slot));
+    for (let s = 1; s <= GameState.SLOT_COUNT; s++) {
+      if (GameState.readRaw(s)) return true;
     }
     return false;
   }
 
-  public loadGame(): boolean {
-    let raw: string | null = GameState.memorySaveFallback;
+  /** Resumo de um slot para exibir na tela de seleção. */
+  public getSlotSummary(
+    slot: number
+  ): { name: string; level: number; mapId: string; completed: boolean } | null {
+    const raw = GameState.readRaw(slot);
+    if (!raw) return null;
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const fromStorage = window.localStorage.getItem(GameState.SAVE_KEY);
-        if (fromStorage) raw = fromStorage;
-      }
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return null;
+      return {
+        name: typeof data.name === 'string' ? data.name : '???',
+        level: typeof data.level === 'number' ? data.level : 1,
+        mapId: typeof data.savedMapId === 'string' ? data.savedMapId : '',
+        completed: Boolean(
+          data?.flags?.flags?.jogo_concluido || data?.flags?.flags?.final_b_coroa_vazia
+        ),
+      };
     } catch {
-      // usa fallback em memória
+      return null;
     }
+  }
+
+  public isGameCompleted(): boolean {
+    if (this.flags.get('jogo_concluido') || this.flags.get('final_b_coroa_vazia')) return true;
+    for (let s = 1; s <= GameState.SLOT_COUNT; s++) {
+      if (this.getSlotSummary(s)?.completed) return true;
+    }
+    return false;
+  }
+
+  public loadGame(slot: number = this.currentSlot): boolean {
+    const raw = GameState.readRaw(slot);
 
     if (!raw) return false;
 
@@ -592,6 +613,7 @@ export class GameState {
       if (!data || typeof data !== 'object') return false;
 
       this.reset();
+      this.currentSlot = slot;
       if (typeof data.name === 'string') this.name = data.name;
       if (typeof data.level === 'number') this.level = data.level;
       if (typeof data.exp === 'number') this.exp = data.exp;
@@ -666,11 +688,11 @@ export class GameState {
     }
   }
 
-  public clearSaveData(): void {
-    GameState.memorySaveFallback = null;
+  public clearSaveData(slot: number = this.currentSlot): void {
+    GameState.memorySaveFallback[slot] = null;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(GameState.SAVE_KEY);
+        window.localStorage.removeItem(GameState.slotKey(slot));
       }
     } catch {
       // ignora

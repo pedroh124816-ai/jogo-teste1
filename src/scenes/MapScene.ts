@@ -1618,6 +1618,51 @@ export class MapScene implements Scene {
     }
   }
 
+  /**
+   * Desenha uma "luz de saída" pulsante com uma seta sobre warps que ficam em piso comum
+   * (cavernas, minas, interiores), para o jogador enxergar por onde sair.
+   */
+  private renderExitMarkers(renderer: Renderer): void {
+    const mapType = this.currentMap.mapType;
+    if (mapType !== 'caverna' && mapType !== 'interior') return;
+
+    const plainFloors = new Set(['cave_floor', 'wood_floor', 'castle_floor']);
+    const pulse = Math.floor(Date.now() / 350) % 2 === 0;
+
+    for (const warp of this.currentMap.getWarps()) {
+      if (warp.trigger === 'stairs') continue;
+      const tile = this.currentMap.getTileAt(warp.tileX, warp.tileY);
+      if (!tile || !plainFloors.has(tile.id)) continue;
+
+      const pos = this.camera.toScreen(warp.tileX * 16, warp.tileY * 16);
+      if (pos.x < -16 || pos.x > CONFIG.screen.width || pos.y < -16 || pos.y > CONFIG.screen.height) continue;
+
+      // Brilho de portal
+      renderer.fillRect(pos.x, pos.y, 16, 16, NES_COLORS.DARK_BLUE);
+      renderer.fillRect(pos.x + 1, pos.y + 1, 14, 14, pulse ? NES_COLORS.LIGHT_BLUE : NES_COLORS.CYAN);
+      renderer.fillRect(pos.x + 3, pos.y + 3, 10, 10, NES_COLORS.WHITE);
+
+      // Seta apontando para o lado oposto ao da chegada (direção da saída)
+      const dx = warp.arriveDir === 'left' ? 1 : warp.arriveDir === 'right' ? -1 : 0;
+      const dy = warp.arriveDir === 'up' ? 1 : warp.arriveDir === 'down' ? -1 : 0;
+      const cx = pos.x + 8;
+      const cy = pos.y + 8;
+      const c = NES_COLORS.DARK_BLUE;
+      for (let i = 0; i < 4; i++) {
+        // ponta da seta e asas
+        const tipX = cx + dx * 4;
+        const tipY = cy + dy * 4;
+        const bx = tipX - dx * i;
+        const by = tipY - dy * i;
+        if (dx === 0) {
+          renderer.fillRect(bx - i, by, i * 2 + 1, 1, c);
+        } else {
+          renderer.fillRect(bx, by - i, 1, i * 2 + 1, c);
+        }
+      }
+    }
+  }
+
   public render(renderer: Renderer): void {
     // 1. Limpa tela com fundo preto (interiores menores ficam centralizados com fundo preto)
     renderer.clear(NES_COLORS.BLACK);
@@ -1625,6 +1670,8 @@ export class MapScene implements Scene {
     // 2. Renderiza tiles visíveis do mapa
     this.currentMap.render(renderer, this.camera, this.assetManager);
 
+    // 2.1 Marcadores visuais de saída (warps sobre piso comum em cavernas e interiores)
+    this.renderExitMarkers(renderer);
     // 3. Renderiza NPCs
     for (const npc of this.npcs) {
       npc.render(renderer, this.camera, this.assetManager);

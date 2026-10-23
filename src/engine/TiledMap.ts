@@ -352,6 +352,25 @@ export class TiledMap {
     }
   }
 
+  /** Escolhe o sprite de piso (tile vizinho não sólido) para desenhar sob objetos transparentes. */
+  private findUnderlaySprite(tx: number, ty: number): string {
+    const neighbors = [
+      [tx, ty + 1],
+      [tx, ty - 1],
+      [tx - 1, ty],
+      [tx + 1, ty],
+    ];
+    for (const [nx, ny] of neighbors) {
+      if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
+      const nDef = TILE_DEFS_BY_ID[this.grid[ny][nx]];
+      if (!nDef || nDef.solid || nDef.kind === 'entrance') continue;
+      const nSprite = Array.isArray(nDef.spriteId) ? nDef.spriteId[0] : nDef.spriteId;
+      if (nSprite === 'barrel' || nSprite === 'pot' || nSprite === 'door') continue;
+      return nSprite;
+    }
+    return 'wood_floor';
+  }
+
   public render(renderer: Renderer, camera: Camera, assetManager: AssetManager): void {
     const minTileX = Math.max(0, Math.floor(camera.x / this.tileSize));
     const maxTileX = Math.min(this.width - 1, Math.ceil((camera.x + camera.viewportWidth) / this.tileSize));
@@ -372,6 +391,15 @@ export class TiledMap {
 
         const sprite = assetManager.getTile(spriteId);
         const screenPos = camera.toScreen(tx * this.tileSize, ty * this.tileSize);
+
+        // Objetos com fundo transparente (barril, vaso) recebem o piso vizinho por baixo
+        if (spriteId === 'barrel' || spriteId === 'pot') {
+          renderer.drawSprite(
+            assetManager.getTile(this.findUnderlaySprite(tx, ty)),
+            screenPos.x,
+            screenPos.y
+          );
+        }
 
         renderer.drawSprite(sprite, screenPos.x, screenPos.y);
       }

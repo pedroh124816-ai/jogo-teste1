@@ -8,7 +8,7 @@ import { AssetManager } from '../assets/AssetManager';
 import { MapScene } from './MapScene';
 import { NameEntryScene } from './NameEntryScene';
 import { DialogueBox } from '../engine/DialogueBox';
-import { gameState } from '../state/GameState';
+import { gameState, GameState } from '../state/GameState';
 import { soundManager } from '../engine/AudioManager';
 
 export class TitleScene implements Scene {
@@ -21,6 +21,10 @@ export class TitleScene implements Scene {
   private dialogueBox: DialogueBox;
   private selectedOption = 0; // 0 = NOVO JOGO, 1 = CONTINUAR
   private options = ['NOVO JOGO', 'CONTINUAR'];
+  private mode: 'main' | 'slots' = 'main';
+  private slotMode: 'new' | 'load' = 'new';
+  private slotCursor = 0;
+  private overwriteArmed = false;
 
   // Animação de estrelas no fundo (estilo introdução NES)
   private stars: Array<{ x: number; y: number; brightness: number; speed: number }> = [];
@@ -45,8 +49,96 @@ export class TitleScene implements Scene {
 
   public enter(): void {
     this.selectedOption = gameState.hasSaveData() ? 1 : 0;
+    this.mode = 'main';
+    this.overwriteArmed = false;
     this.timer = 0;
     soundManager.playBgm('title');
+  }
+
+  private updateSlots(): void {
+    if (this.input.wasPressed('cancel')) {
+      soundManager.playSfx('cancel');
+      this.mode = 'main';
+      this.overwriteArmed = false;
+      return;
+    }
+    if (this.input.wasPressed('up')) {
+      this.slotCursor = (this.slotCursor + GameState.SLOT_COUNT - 1) % GameState.SLOT_COUNT;
+      this.overwriteArmed = false;
+      soundManager.playSfx('cursor');
+    } else if (this.input.wasPressed('down')) {
+      this.slotCursor = (this.slotCursor + 1) % GameState.SLOT_COUNT;
+      this.overwriteArmed = false;
+      soundManager.playSfx('cursor');
+    }
+
+    if (!this.input.wasPressed('confirm')) return;
+    const slot = this.slotCursor + 1;
+    const exists = gameState.hasSaveData(slot);
+
+    if (this.slotMode === 'new') {
+      if (exists && !this.overwriteArmed) {
+        // Pede segunda confirmação antes de sobrescrever um save existente
+        this.overwriteArmed = true;
+        soundManager.playSfx('error');
+        return;
+      }
+      soundManager.playSfx('confirm');
+      gameState.currentSlot = slot;
+      if (exists) gameState.clearSaveData(slot);
+      const nameScene = new NameEntryScene(this.sceneManager, this.input, this.assetManager);
+      this.sceneManager.fadeTransition(nameScene);
+      return;
+    }
+
+    // Carregar
+    if (!exists || !gameState.loadGame(slot)) {
+      soundManager.playSfx('error');
+      return;
+    }
+    soundManager.playSfx('confirm');
+    const mapScene = new MapScene(
+      this.sceneManager,
+      this.input,
+      this.assetManager,
+      gameState.savedMapId,
+      gameState.savedTileX,
+      gameState.savedTileY,
+      gameState.savedDir
+    );
+    this.sceneManager.fadeTransition(mapScene);
+  }
+
+  private renderSlots(renderer: Renderer): void {
+    renderer.drawWindow(12, 12, 232, 200, NES_COLORS.BLACK);
+    const heading = this.slotMode === 'new' ? 'ESCOLHA UM SAVE' : 'CARREGAR JOGO';
+    renderer.drawText(heading, Math.floor((CONFIG.screen.width - renderer.measureText(heading)) / 2), 28, {
+      color: NES_COLORS.GOLD,
+    });
+
+    for (let i = 0; i < GameState.SLOT_COUNT; i++) {
+      const y = 52 + i * 40;
+      const selected = i === this.slotCursor;
+      renderer.drawWindow(24, y, 208, 34, NES_COLORS.BLACK);
+      if (selected && Math.floor(this.timer / CONFIG.ui.cursorBlinkFrames) % 2 === 0) {
+        renderer.drawText('►', 28, y + 12, { color: NES_COLORS.WHITE });
+      }
+      const summary = gameState.getSlotSummary(i + 1);
+      const color = selected ? NES_COLORS.WHITE : NES_COLORS.LIGHT_GRAY;
+      renderer.drawText(`SAVE ${i + 1}`, 40, y + 6, { color: NES_COLORS.LIGHT_BLUE });
+      if (summary) {
+        renderer.drawText(`${summary.name}  NV ${summary.level}`, 40, y + 18, { color });
+        if (summary.completed) renderer.drawText('★', 212, y + 6, { color: NES_COLORS.GOLD });
+      } else {
+        renderer.drawText('- VAZIO -', 40, y + 18, { color: NES_COLORS.DARK_GRAY });
+      }
+    }
+
+    let hint = 'Z: ESCOLHER   X: VOLTAR';
+    if (this.overwriteArmed) hint = 'SOBRESCREVER? APERTE Z';
+    renderer.drawText(hint, Math.floor((CONFIG.screen.width - renderer.measureText(hint)) / 2), 184, {
+      color: this.overwriteArmed ? NES_COLORS.GOLD : NES_COLORS.PALE_GREEN,
+    });
   }
 
   public update(): void {
@@ -54,6 +146,11 @@ export class TitleScene implements Scene {
 
     if (this.dialogueBox.isOpen()) {
       this.dialogueBox.update(this.input);
+      return;
+    }
+
+    if (this.mode === 'slots') {
+      this.updateSlots();
       return;
     }
 
@@ -67,12 +164,14 @@ export class TitleScene implements Scene {
     if (this.input.wasPressed('confirm')) {
       if (this.selectedOption === 0) {
         soundManager.playSfx('confirm');
-        // NOVO JOGO -> abre tela de escolha do nome [NOME]
-        const nameScene = new NameEntryScene(this.sceneManager, this.input, this.assetManager);
-        this.sceneManager.fadeTransition(nameScene);
+        // NOVO JOGO -> escolhe o slot de save e depois o nome
+        this.mode = 'slots';
+        this.slotMode = 'new';
+        this.slotCursor = 0;
+        this.overwriteArmed = false;
       } else {
-        // CONTINUAR -> carrega save do localStorage se existir
-        if (!gameState.hasSaveData() || !gameState.loadGame()) {
+        // CONTINUAR -> escolhe qual save carregar
+        if (!gameState.hasSaveData()) {
           soundManager.playSfx('error');
           this.dialogueBox.start(
             'SISTEMA',
@@ -81,16 +180,18 @@ export class TitleScene implements Scene {
           return;
         }
         soundManager.playSfx('confirm');
-        const mapScene = new MapScene(
-          this.sceneManager,
-          this.input,
-          this.assetManager,
-          gameState.savedMapId,
-          gameState.savedTileX,
-          gameState.savedTileY,
-          gameState.savedDir
-        );
-        this.sceneManager.fadeTransition(mapScene);
+        this.mode = 'slots';
+        this.slotMode = 'load';
+        this.overwriteArmed = false;
+        // Posiciona o cursor no primeiro slot ocupado
+        let first = 0;
+        for (let s = 1; s <= GameState.SLOT_COUNT; s++) {
+          if (gameState.hasSaveData(s)) {
+            first = s - 1;
+            break;
+          }
+        }
+        this.slotCursor = first;
       }
     }
   }
@@ -107,6 +208,12 @@ export class TitleScene implements Scene {
       if (b > 0.7) starColor = NES_COLORS.WHITE;
       else if (b > 0.4) starColor = NES_COLORS.MED_GRAY;
       renderer.fillRect(star.x, star.y, 1, 1, starColor);
+    }
+
+    if (this.mode === 'slots') {
+      this.renderSlots(renderer);
+      if (this.dialogueBox.isOpen()) this.dialogueBox.render(renderer);
+      return;
     }
 
     // 2. Moldura externa decorativa de tela de título (estilo DQ)
