@@ -40,13 +40,38 @@ export class VignetteScene implements Scene {
     this.speakerName = speakerName;
     this.onFinished = onFinished;
 
-    if (Array.isArray(textOrPages)) {
-      this.pages = textOrPages;
-    } else {
-      this.pages = textOrPages.split(/\n---\n|\n\n/).map((p) => p.trim());
-    }
+    const rawPages = Array.isArray(textOrPages)
+      ? textOrPages
+      : textOrPages.split(/\n---\n|\n\n/).map((p) => p.trim());
+
+    this.pages = rawPages.map((p) => this.wrapPageText(p, 27));
 
     this.data = getCutsceneData(cutsceneId);
+  }
+
+  private wrapPageText(page: string, maxCharsPerLine = 27): string {
+    const rawLines = page.split('\n');
+    const wrapped: string[] = [];
+    for (const rawLine of rawLines) {
+      if (rawLine.length <= maxCharsPerLine) {
+        wrapped.push(rawLine);
+        continue;
+      }
+      const words = rawLine.split(' ');
+      let current = '';
+      for (const word of words) {
+        if (!current) {
+          current = word;
+        } else if (current.length + 1 + word.length <= maxCharsPerLine) {
+          current += ' ' + word;
+        } else {
+          wrapped.push(current);
+          current = word;
+        }
+      }
+      if (current) wrapped.push(current);
+    }
+    return wrapped.join('\n');
   }
 
   public enter(): void {

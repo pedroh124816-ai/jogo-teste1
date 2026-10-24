@@ -372,6 +372,46 @@ export const TILE_DEFS: Record<string, TileDef> = {
     encounterRate: 0,
     spriteId: 'pot',
   },
+  '8': {
+    id: 'roof_blue',
+    name: 'Telhado Azul',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: 'roof_blue',
+  },
+  '9': {
+    id: 'roof_thatch',
+    name: 'Telhado de Palha',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: 'roof_thatch',
+  },
+  'u': {
+    id: 'roof_chimney',
+    name: 'Chaminé',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: 'roof_chimney',
+  },
+  'v': {
+    id: 'brick_wall',
+    name: 'Parede de Alvenaria',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: 'brick_wall',
+  },
+  'y': {
+    id: 'wood_wall',
+    name: 'Parede de Madeira',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: 'wood_wall',
+  },
 };
 
 /**
@@ -435,5 +475,10 @@ export const TILED_GID_ORDER: string[] = [
   'high_mountain',
   'barrel',
   'pot',
+  'roof_blue',
+  'roof_thatch',
+  'roof_chimney',
+  'brick_wall',
+  'wood_wall',
 ];
 

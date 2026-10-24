@@ -140,7 +140,14 @@ export class MapScene implements Scene {
 
     // Se houver baús já abertos neste mapa, atualiza visualmente para 'chest_open'
     for (const chest of this.currentMap.getChests()) {
-      if (gameState.openedChests.has(chest.id)) {
+      const coordKey = `chest_${mapId}_${chest.tileX}_${chest.tileY}`;
+      if (
+        gameState.openedChests.has(chest.id) ||
+        gameState.openedChests.has(chest.name) ||
+        gameState.openedChests.has(coordKey) ||
+        gameState.getFlag(`bau_aberto_${chest.id}`)
+      ) {
+        gameState.openedChests.add(chest.id);
         this.currentMap.setTileAt(chest.tileX, chest.tileY, 'chest_open');
       }
     }
@@ -621,7 +628,7 @@ export class MapScene implements Scene {
                 [
                   '...Aneth?\nPerdoe-me...',
                   'Não pude guardar a porta...\nO lume me consumiu...',
-                  'No pulso da fera caída brilha\numa Pulseira Antiga com o\nsímbolo do seu Medalhão!',
+                  'No pulso da fera caída\nbrilha uma Pulseira Antiga\ncom o símbolo do Medalhão!',
                   'Volte ao Castelo Real e\nrelate tudo ao Rei Auren.',
                 ],
                 () => {
@@ -1585,12 +1592,22 @@ export class MapScene implements Scene {
         return true;
       }
 
-      if (gameState.openedChests.has(chest.id)) {
+      const coordKey = `chest_${this.currentMapId}_${chest.tileX}_${chest.tileY}`;
+      const isAlreadyOpen =
+        gameState.openedChests.has(chest.id) ||
+        gameState.openedChests.has(chest.name) ||
+        gameState.openedChests.has(coordKey) ||
+        gameState.getFlag(`bau_aberto_${chest.id}`);
+
+      if (isAlreadyOpen) {
         soundManager.playSfx('error');
         this.dialogueBox.start('BAÚ', 'O baú está vazio.');
       } else {
         soundManager.playSfx('chest');
         gameState.openedChests.add(chest.id);
+        gameState.openedChests.add(chest.name);
+        gameState.openedChests.add(coordKey);
+        gameState.setFlag(`bau_aberto_${chest.id}`, true);
         this.currentMap.setTileAt(chest.tileX, chest.tileY, 'chest_open');
 
         if (chest.gold) {
@@ -1603,6 +1620,11 @@ export class MapScene implements Scene {
           gameState.setFlag(chest.setFlagOnOpen, true);
         } else if (chest.id === 'bau_ulan') {
           gameState.setFlag('bau_ulan_aberto', true);
+        }
+
+        // Persiste imediatamente caso já haja gravação ativa para o baú nunca reaparecer fechado
+        if (gameState.hasSaveData(gameState.currentSlot)) {
+          gameState.saveGame(this.currentMapId, this.player.tileX, this.player.tileY, this.player.direction);
         }
 
         const defaultMsg =
