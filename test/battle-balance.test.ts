@@ -59,6 +59,23 @@ describe('Sistema de Batalha, Balanceamento e Monstros Originais (Etapa 5)', () 
     const ulan = getMonsterDef('ulan_fera');
     expect(ulan).toBeTruthy();
     expect(ulan?.canFlee).toBe(false);
+
+    // Monstros do Ato 2 possuem atributos elevados para desafiar heróis Nível 10+
+    const act2Ids = [
+      'caranguejo_vidro',
+      'contrabandista',
+      'sirena_coral',
+      'gaivota_abissal',
+      'tartaruga_espinho',
+      'anemona_eletrica',
+    ];
+    for (const id of act2Ids) {
+      const m = getMonsterDef(id);
+      expect(m, `Monstro do Ato 2 '${id}' deve existir`).toBeTruthy();
+      expect(m!.maxHp).toBeGreaterThanOrEqual(90);
+      expect(m!.atk).toBeGreaterThanOrEqual(48);
+      expect(m!.def).toBeGreaterThanOrEqual(34);
+    }
   });
 
   it('tabelas de encontro por bioma devem conter monstros válidos e somatório positivo de pesos', () => {

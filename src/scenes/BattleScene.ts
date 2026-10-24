@@ -5,7 +5,7 @@ import { SceneManager } from '../engine/SceneManager';
 import { NES_COLORS } from '../engine/Palette';
 import { MonsterDef, getSpellDef } from '../data/monsters';
 import { gameState } from '../state/GameState';
-import { AssetManager, Sprite } from '../assets/AssetManager';
+import { AssetManager, BattleBiomeId, Sprite } from '../assets/AssetManager';
 import { BattleEffects } from '../engine/BattleEffects';
 import { getItemDef } from '../data/items';
 import { BgmTrackId, soundManager } from '../engine/AudioManager';
@@ -48,6 +48,8 @@ export class BattleScene implements Scene {
 
   private monsterSprite: Sprite | null = null;
   private previousBgm: BgmTrackId | null = null;
+  private terrainId?: string;
+  private biome: BattleBiomeId = 'floresta';
 
   constructor(
     sceneManager: SceneManager,
@@ -55,7 +57,8 @@ export class BattleScene implements Scene {
     monster: MonsterDef,
     assetManager: AssetManager,
     onDefeat?: () => void,
-    onVictory?: () => void
+    onVictory?: () => void,
+    terrainId?: string
   ) {
     this.sceneManager = sceneManager;
     this.input = input;
@@ -63,7 +66,89 @@ export class BattleScene implements Scene {
     this.assetManager = assetManager;
     this.onDefeat = onDefeat;
     this.onVictory = onVictory;
+    this.terrainId = terrainId;
     this.monsterHp = monster.maxHp;
+    this.biome = this.resolveBattleBiome();
+  }
+
+  private resolveBattleBiome(): BattleBiomeId {
+    const mapId = gameState.savedMapId;
+    const tx = gameState.savedTileX;
+    const ty = gameState.savedTileY;
+    const mId = this.monster.id;
+
+    const caveMaps = new Set([
+      'caverna_b1',
+      'caverna_b2',
+      'gruta_costa',
+      'gruta_costa_b2',
+      'gruta_costa_b3',
+      'mina_velha',
+      'cripta_refino',
+      'castelo_subsolo',
+      'templo_coracao',
+    ]);
+    const caveMonsters = new Set([
+      'morcego_treva',
+      'mineiro_louco',
+      'ulan_fera',
+      'anemona_eletrica',
+      'escorpiao_cristal',
+      'sentinela_antiga',
+      'salamandra_lava',
+      'vael',
+      'auren',
+    ]);
+    if (caveMaps.has(mapId) || this.terrainId === 'cave_floor' || caveMonsters.has(mId)) {
+      return 'caverna';
+    }
+
+    const coastMonsters = new Set([
+      'caranguejo_vidro',
+      'contrabandista',
+      'sirena_coral',
+      'tartaruga_espinho',
+      'gosma_azul',
+      'brasca',
+    ]);
+    // O cenário da praia (costa) só deve aparecer quando estiver verdadeiramente perto do mar:
+    // na areia ('sand'), em Porto do Sol ('cidade_2'), navegando ou no litoral sul (ty >= 88 e tx >= 34).
+    // Pontes no interior do mapa (y=68..70) e planícies/bosques intermediários (y < 88) não mostram praia.
+    const isNearSea =
+      this.terrainId === 'sand' ||
+      mapId === 'cidade_2' ||
+      gameState.transport === 'boat' ||
+      (mapId === 'overworld' && ty >= 88 && tx >= 34);
+
+    if (isNearSea || (coastMonsters.has(mId) && (ty >= 88 || mapId === 'cidade_2'))) {
+      return 'costa';
+    }
+
+    const mountainMaps = new Set(['rochedo', 'cobre_alto', 'santuario']);
+    const mountainMonsters = new Set([
+      'gaivota_abissal',
+      'rochedo_vivo',
+      'golem_cobre',
+      'corvo_manchado',
+      'daros',
+      'dagan',
+    ]);
+    if (
+      this.terrainId === 'mountain' ||
+      mountainMaps.has(mapId) ||
+      mountainMonsters.has(mId) ||
+      (mapId === 'overworld' && ty <= 40)
+    ) {
+      return 'montanha';
+    }
+
+    const forestMaps = new Set(['bosque_brasa', 'refugio_raizes', 'floresta_secreta']);
+    const forestMonsters = new Set(['lobo_brasa', 'tronco_palido', 'bandoleiro', 'lobo_sombrio']);
+    if (this.terrainId === 'tree' || forestMaps.has(mapId) || (this.terrainId !== 'grass' && this.terrainId !== 'flower_grass' && forestMonsters.has(mId))) {
+      return 'floresta';
+    }
+
+    return 'planicie';
   }
 
   public enter(): void {
@@ -519,6 +604,15 @@ export class BattleScene implements Scene {
     // Fundo preto clássico NES
     renderer.clear(NES_COLORS.BLACK);
 
+    // Cenário dinâmico ilustrado de acordo com o bioma atual
+    const bgImg = this.assetManager.getBattleBackground(this.biome);
+    if (bgImg) {
+      renderer.ctx.drawImage(bgImg, offset.x, offset.y, 256, 168);
+    } else {
+      // Fallback caso imagem ainda não esteja disponível (ex: ambiente de testes)
+      renderer.drawWindow(48 + offset.x, 60 + offset.y, 160, 96, NES_COLORS.BLACK);
+    }
+
     // 1. Caixa de Mensagem Superior (240x48 px, suporta até 3 linhas de 28 caracteres)
     renderer.drawWindow(8 + offset.x, 8 + offset.y, 240, 48, NES_COLORS.BLACK);
     if (this.currentMessage) {
@@ -534,20 +628,25 @@ export class BattleScene implements Scene {
       }
     }
 
-    // 2. Arena Central com Moldura (160x96 px)
-    renderer.drawWindow(48 + offset.x, 60 + offset.y, 160, 96, NES_COLORS.BLACK);
-
-    // Nome do Monstro no topo da arena
+    // Nome do Monstro no topo da arena com tarja escura de leitura
     const nameWidth = renderer.measureText(this.monster.name);
     const nameX = 48 + Math.floor((160 - nameWidth) / 2) + offset.x;
-    renderer.drawText(this.monster.name, nameX, 66 + offset.y, { color: NES_COLORS.GOLD });
+    renderer.fillRect(nameX - 5, 62 + offset.y, nameWidth + 10, 12, 'rgba(0, 0, 0, 0.72)');
+    renderer.drawText(this.monster.name, nameX, 64 + offset.y, { color: NES_COLORS.GOLD });
 
-    // Renderiza Sprite do Monstro com idle orgânico, investida e dissolução na derrota
+    // Renderiza Sprite do Monstro com idle orgânico, sombreamento de caverna, investida e dissolução
     if ((this.monsterHp > 0 || this.battleEffects.isDefeatActive()) && this.monsterSprite) {
       const spr = this.monsterSprite;
       const sprX = 48 + Math.floor((160 - spr.width) / 2) + offset.x;
-      const sprY = 78 + Math.floor((72 - spr.height) / 2) + offset.y;
-      this.battleEffects.renderMonster(renderer, spr, sprX, sprY, this.monster.spriteId);
+      const sprY = 82 + Math.floor((68 - spr.height) / 2) + offset.y;
+      this.battleEffects.renderMonster(
+        renderer,
+        spr,
+        sprX,
+        sprY,
+        this.monster.spriteId,
+        this.biome === 'caverna'
+      );
     }
 
     // Renderiza todos os efeitos visuais (cortes de espada, crítico, magias, partículas e textos)

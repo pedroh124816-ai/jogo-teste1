@@ -318,5 +318,29 @@
     "price": 0,
     "unsellable": true,
     "description": "Confissão escrita pelo Rei\nna Câmara do Lume."
+  },
+  {
+    "id": "anel_vitalidade",
+    "name": "Anel Vitalidade",
+    "type": "accessory",
+    "price": 300,
+    "defBonus": 6,
+    "description": "Anel encantado do Cavaleiro.\nFortalece o vigor. (DEF +6)"
+  },
+  {
+    "id": "chave_lava",
+    "name": "Chave da Lava",
+    "type": "key",
+    "price": 0,
+    "unsellable": true,
+    "description": "Selo térmico do Altar.\nErgue a ponte sobre a lava."
+  },
+  {
+    "id": "escudo_dragao",
+    "name": "Escudo de Dragão",
+    "type": "shield",
+    "price": 450,
+    "defBonus": 20,
+    "description": "Escudo forjado nas chamas da\ncaverna vulcânica. (DEF +20)"
   }
 ]

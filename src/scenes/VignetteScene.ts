@@ -99,9 +99,13 @@ export class VignetteScene implements Scene {
     this.cursorBlink++;
     this.frameTimer++;
 
-    // Alternância de quadros de animação (respiração/chamas)
+    // Alternância de quadros de animação (respiração/chamas/desmoronamento)
     if (this.data && this.data.frames.length > 1) {
-      const ticksPerFrame = Math.max(10, Math.floor(60 / (this.data.fps || 1.5)));
+      const baseTicks = Math.max(10, Math.floor(60 / (this.data.fps || 1.5)));
+      const isEndpointHold =
+        this.data.frames.length > 2 &&
+        (this.currentFrame === 0 || this.currentFrame === this.data.frames.length - 1);
+      const ticksPerFrame = isEndpointHold ? Math.floor(baseTicks * 1.8) : baseTicks;
       if (this.frameTimer >= ticksPerFrame) {
         this.frameTimer = 0;
         this.currentFrame = (this.currentFrame + 1) % this.data.frames.length;

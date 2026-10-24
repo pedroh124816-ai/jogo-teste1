@@ -412,6 +412,22 @@ export const TILE_DEFS: Record<string, TileDef> = {
     encounterRate: 0,
     spriteId: 'wood_wall',
   },
+  'z': {
+    id: 'lava',
+    name: 'Lava Vulcânica',
+    solid: true,
+    kind: 'terrain',
+    encounterRate: 0,
+    spriteId: ['lava_0', 'lava_1'],
+  },
+  'x': {
+    id: 'crystal_altar',
+    name: 'Altar da Espada de Cristal',
+    solid: true,
+    kind: 'counter',
+    encounterRate: 0,
+    spriteId: 'crystal_altar',
+  },
 };
 
 /**
@@ -480,5 +496,7 @@ export const TILED_GID_ORDER: string[] = [
   'roof_chimney',
   'brick_wall',
   'wood_wall',
+  'lava',
+  'crystal_altar',
 ];
 

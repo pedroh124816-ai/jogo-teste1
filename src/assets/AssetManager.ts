@@ -9,6 +9,8 @@ export interface Sprite {
   height: number;
 }
 
+export type BattleBiomeId = 'floresta' | 'caverna' | 'costa' | 'montanha' | 'planicie';
+
 /**
  * Interface abstrata do carregador de assets.
  * Permite trocar a implementação atual (matrizes em código)
@@ -21,6 +23,17 @@ export interface IAssetLoader {
   getHero(dir: Direction, frame: number): Sprite;
   getNpc(id: string, dir: Direction): Sprite;
   getMonster(id: string): Sprite;
+  getBattleBackground?(biome: BattleBiomeId): HTMLImageElement | null;
+}
+
+function loadImageOptional(src: string): Promise<HTMLImageElement | null> {
+  if (typeof Image === 'undefined') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
 }
 
 /**
@@ -61,6 +74,7 @@ export class ProceduralAssetLoader implements IAssetLoader {
   private hero: Map<string, Sprite> = new Map();
   private npcs: Map<string, Sprite> = new Map();
   private monsters: Map<string, Sprite> = new Map();
+  private battleBackgrounds: Map<BattleBiomeId, HTMLImageElement> = new Map();
 
   public async load(): Promise<void> {
     // 1. Processa todos os tiles
@@ -111,6 +125,35 @@ export class ProceduralAssetLoader implements IAssetLoader {
         height: data.height,
       });
     }
+
+    // 5. Pré-carrega os cenários ilustrados de batalha por bioma e sprites PNG dedicados
+    const biomes: BattleBiomeId[] = ['floresta', 'caverna', 'costa', 'montanha', 'planicie'];
+    await Promise.all([
+      ...biomes.map(async (b) => {
+        const img = await loadImageOptional(`/assets/backgrounds/${b}.png`);
+        if (img) {
+          this.battleBackgrounds.set(b, img);
+        }
+      }),
+      (async () => {
+        const turtleImg = await loadImageOptional('/assets/monsters/tartaruga_espinho.png');
+        if (turtleImg) {
+          const canvas = document.createElement('canvas');
+          canvas.width = 48;
+          canvas.height = 48;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(turtleImg, 0, 0, 48, 48);
+            this.monsters.set('tartaruga_espinho', {
+              canvas,
+              width: 48,
+              height: 48,
+            });
+          }
+        }
+      })(),
+    ]);
   }
 
   public getTile(id: string): Sprite {
@@ -153,6 +196,10 @@ export class ProceduralAssetLoader implements IAssetLoader {
     }
     return sprite;
   }
+
+  public getBattleBackground(biome: BattleBiomeId): HTMLImageElement | null {
+    return this.battleBackgrounds.get(biome) || this.battleBackgrounds.get('floresta') || null;
+  }
 }
 
 /**
@@ -194,5 +241,12 @@ export class AssetManager {
 
   public getMonster(id: string): Sprite {
     return this.loader.getMonster(id);
+  }
+
+  public getBattleBackground(biome: BattleBiomeId): HTMLImageElement | null {
+    if (this.loader.getBattleBackground) {
+      return this.loader.getBattleBackground(biome);
+    }
+    return null;
   }
 }

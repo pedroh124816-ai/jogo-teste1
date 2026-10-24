@@ -24,7 +24,7 @@ import { gameState } from '../state/GameState';
 import { rollEncounterForTerrain, getMonsterDef } from '../data/monsters';
 import { soundManager, BgmTrackId } from '../engine/AudioManager';
 
-type WarpState = 'none' | 'fade_out' | 'fade_in';
+type WarpState = 'none' | 'fade_out' | 'cave_intro' | 'fade_in';
 
 interface PendingWarp {
   targetMap: string;
@@ -53,6 +53,9 @@ export class MapScene implements Scene {
   // Estado de transição entre mapas (Warp com Fade)
   private warpState: WarpState = 'none';
   private warpProgress = 0;
+  private caveIntroTimer = 0;
+  private caveIntroTotal = 110;
+  private caveIntroImg: HTMLImageElement | null = null;
   private quakeTimer = 0;
   private onQuakeFinishedCallback: (() => void) | null = null;
 
@@ -83,6 +86,12 @@ export class MapScene implements Scene {
     this.camera = new Camera();
     this.dialogueBox = new DialogueBox();
     this.player = new Player(initialX, initialY);
+
+    if (typeof Image !== 'undefined') {
+      const img = new Image();
+      img.src = '/assets/cave_intro.png';
+      this.caveIntroImg = img;
+    }
 
     // Carrega o mapa inicial
     this.loadMap(initialMapId, initialX, initialY, initialDir);
@@ -213,6 +222,27 @@ export class MapScene implements Scene {
     }
     if (mapId !== 'overworld') {
       gameState.transport = 'foot';
+    }
+
+    // No 3º Andar da Caverna do Cavaleiro:
+    // 1. O rio de lava bloqueia a travessia (x=8..13, y=10..11) até ativar o Altar Antigo (Chave da Lava) ou o Pedestal
+    // 2. A passagem leste para a Gruta Esmeralda e Floresta Secreta (x=28..29, y=12..14) só abre após derrotar o Almirante Brasca!
+    if (mapId === 'gruta_costa_b3') {
+      const lavaBridgeOpen =
+        gameState.getFlag('altar_cavaleiro_ativado') ||
+        gameState.getFlag('ponte_lava_erguida') ||
+        gameState.getItemQuantity('chave_lava') > 0;
+      for (let x = 8; x <= 13; x++) {
+        this.currentMap.setTileAt(x, 10, lavaBridgeOpen ? 'bridge' : 'lava');
+        this.currentMap.setTileAt(x, 11, lavaBridgeOpen ? 'bridge' : 'lava');
+      }
+
+      const brascaDefeated =
+        gameState.getFlag('brasca_poupado') || gameState.getFlag('brasca_executado');
+      for (let y = 12; y <= 14; y++) {
+        this.currentMap.setTileAt(28, y, brascaDefeated ? 'cave_floor' : 'cave_wall');
+        this.currentMap.setTileAt(29, y, brascaDefeated ? 'cave_floor' : 'cave_wall');
+      }
     }
 
     // Se foi especificado um warp de destino por id/nome, posiciona exatamente nele
@@ -668,8 +698,11 @@ export class MapScene implements Scene {
       }
     }
 
-    // 1.1 Duelo do Ato 2: Almirante Brasca na Gruta da Costa
-    if (npc.name === 'Almirante Brasca' && this.currentMapId === 'gruta_costa') {
+    // 1.1 Duelo do Ato 2: Almirante Brasca na Gruta da Costa / Sala do Cavaleiro (3º Andar)
+    if (
+      npc.name === 'Almirante Brasca' &&
+      (this.currentMapId === 'gruta_costa' || this.currentMapId === 'gruta_costa_b3')
+    ) {
       if (gameState.getFlag('brasca_poupado')) {
         this.dialogueBox.start(
           npc.name,
@@ -698,17 +731,32 @@ export class MapScene implements Scene {
                   'Brasca cai de joelhos,\nferido. O que você fará\ncom o rebelde?',
                   ['Poupar', 'Executar'],
                   (choiceIdx) => {
+                    // Abre imediatamente a passagem rochosa a leste (x=28..29, y=12..14) para a Gruta Esmeralda e o Bosque Oculto!
+                    if (this.currentMapId === 'gruta_costa_b3') {
+                      soundManager.playSfx('stairs');
+                      for (let y = 12; y <= 14; y++) {
+                        this.currentMap.setTileAt(28, y, 'cave_floor');
+                        this.currentMap.setTileAt(29, y, 'cave_floor');
+                      }
+                    }
+
+                    const santuarioVisited =
+                      gameState.getFlag('medalhao_brilhou') || gameState.getFlag('olivia_aviso_dado');
+                    const nextStepHint = santuarioVisited
+                      ? 'A parede a leste abriu para o\nBosque Oculto! Saia por lá e\nvolte ao REI AUREN no Castelo\npara concluir o Ato 2!'
+                      : 'A parede a leste abriu para o\nBosque Oculto! Saia por lá,\nvisite o SANTUÁRIO DA LUZ a\nnordeste e volte ao Rei Auren!';
+
                     if (choiceIdx === 0) {
                       gameState.setFlag('brasca_poupado', true);
                       this.dialogueBox.start(
                         'Almirante Brasca',
-                        'Você guarda a espada.\nBrasca promete ajudá-lo\nno Porto do Sol!\n---\nAgora leve seu Medalhão\nao Santuário da Luz!'
+                        `Você guarda a espada.\nBrasca promete ajudá-lo\nno Porto do Sol!\n---\n${nextStepHint}`
                       );
                     } else {
                       gameState.setFlag('brasca_executado', true);
                       this.dialogueBox.start(
-                        'GRUTA DA COSTA',
-                        'Você cumpre a ordem real.\nO mar leva o silêncio da\ngruta. Vá ao Santuário!'
+                        'CAVERNA DO CAVALEIRO',
+                        `Você cumpre a ordem real.\nO eco da batalha abre a\npassagem secreta a leste!\n---\n${nextStepHint}`
                       );
                     }
                   }
@@ -723,9 +771,13 @@ export class MapScene implements Scene {
 
     // 1.2 Santuário da Luz (Ato 2): Sumo Sacerdote Hesper e Irmã Olívia
     if (npc.name === 'Sumo Sacerdote Hesper' && this.currentMapId === 'santuario') {
+      const brascaDone = gameState.getFlag('brasca_poupado') || gameState.getFlag('brasca_executado');
+      const nextStep = brascaDone
+        ? 'Você já cumpriu sua missão na\ncosta e no Santuário! Volte ao\nCASTELO REAL e fale com o\nRei Auren para concluir o Ato 2!'
+        : 'Agora siga ao sul até a\nCaverna do Cavaleiro (a leste\ndo Porto do Sol) e enfrente o\nAlmirante Brasca!';
       this.dialogueBox.start(
         npc.name,
-        'Aproxime o Medalhão do\naltar sagrado, [NOME]...\n---\nO Medalhão brilha forte!\nHesper empalidece ao ver\no símbolo de Veyra!\n---\n"Esconda isso, herói!\nNinguém deve ver esse\nsinal antigo!"',
+        `Aproxime o Medalhão do\naltar sagrado, [NOME]...\n---\nO Medalhão brilha forte!\nHesper empalidece ao ver\no símbolo de Veyra!\n---\n"Esconda isso, herói!\nNinguém deve ver esse\nsinal antigo!"\n---\n${nextStep}`,
         () => {
           gameState.setFlag('medalhao_brilhou', true);
           gameState.setFlag('hesper_viu_medalhao', true);
@@ -1612,6 +1664,32 @@ export class MapScene implements Scene {
       if (sign.setFlag) {
         gameState.setFlag(sign.setFlag, true);
       }
+      if (sign.setFlag === 'altar_cavaleiro_ativado') {
+        soundManager.playSfx('chest');
+        if (gameState.getItemQuantity('chave_lava') === 0) {
+          gameState.addItem('chave_lava', 1);
+        }
+        gameState.setFlag('ponte_lava_erguida', true);
+      }
+      if (sign.title === 'PEDESTAL DA LAVA' && this.currentMapId === 'gruta_costa_b3') {
+        const hasKey =
+          gameState.getFlag('altar_cavaleiro_ativado') ||
+          gameState.getFlag('ponte_lava_erguida') ||
+          gameState.getItemQuantity('chave_lava') > 0;
+        if (!hasKey) {
+          soundManager.playSfx('confirm');
+          gameState.setFlag('ponte_lava_erguida', true);
+          for (let x = 8; x <= 13; x++) {
+            this.currentMap.setTileAt(x, 10, 'bridge');
+            this.currentMap.setTileAt(x, 11, 'bridge');
+          }
+          this.dialogueBox.start(
+            'PEDESTAL DA LAVA',
+            'Você aciona o mecanismo rúnico\ndo Pedestal da Lava!\n---\nUma passarela de pedra vulcânica\ne ferro emerge sobre o magma,\nliberando a travessia!'
+          );
+          return true;
+        }
+      }
       if (sign.setFlag === 'diario_auren_lido' && gameState.getItemQuantity('diario_auren') === 0) {
         gameState.addItem('diario_auren', 1);
       }
@@ -1951,6 +2029,18 @@ export class MapScene implements Scene {
     }
 
     if (
+      targetMap === 'floresta_secreta' &&
+      !gameState.getFlag('brasca_poupado') &&
+      !gameState.getFlag('brasca_executado')
+    ) {
+      this.dialogueBox.start(
+        'PASSAGEM SELADA',
+        'A passagem para o Bosque Oculto\nestá bloqueada! Enfrente primeiro\no Almirante Brasca no 3º Andar!'
+      );
+      return false;
+    }
+
+    if (
       (targetMap === 'cidade_2' || targetMap === 'gruta_costa' || targetMap === 'santuario') &&
       !gameState.getFlag('ato1_concluido')
     ) {
@@ -2040,6 +2130,19 @@ export class MapScene implements Scene {
       this.warpProgress += 1 / CONFIG.ui.fadeFrames;
       if (this.warpProgress >= 1) {
         this.warpProgress = 1;
+        const isEnteringCaveFromOverworld =
+          this.currentMapId === 'overworld' &&
+          this.pendingWarp &&
+          (this.pendingWarp.targetMap === 'gruta_costa' ||
+            this.pendingWarp.targetMap === 'caverna_b1' ||
+            this.pendingWarp.targetMap === 'mina_velha');
+
+        if (isEnteringCaveFromOverworld) {
+          this.warpState = 'cave_intro';
+          this.caveIntroTimer = this.caveIntroTotal;
+          return;
+        }
+
         if (this.pendingWarp) {
           gameState.transport = 'foot';
           this.loadMap(
@@ -2051,6 +2154,30 @@ export class MapScene implements Scene {
           );
           this.pendingWarp = null;
         }
+        this.warpState = 'fade_in';
+      }
+      return;
+    }
+
+    if (this.warpState === 'cave_intro') {
+      this.caveIntroTimer--;
+      if (
+        this.caveIntroTimer <= 0 ||
+        this.input.wasPressed('confirm') ||
+        this.input.wasPressed('cancel')
+      ) {
+        if (this.pendingWarp) {
+          gameState.transport = 'foot';
+          this.loadMap(
+            this.pendingWarp.targetMap,
+            this.pendingWarp.targetX,
+            this.pendingWarp.targetY,
+            this.pendingWarp.targetDir,
+            this.pendingWarp.targetWarp
+          );
+          this.pendingWarp = null;
+        }
+        this.warpProgress = 1;
         this.warpState = 'fade_in';
       }
       return;
@@ -2224,7 +2351,8 @@ export class MapScene implements Scene {
             const monster = rollEncounterForTerrain(
               currentTile.id,
               this.currentMapId === 'overworld' ? this.player.tileX : undefined,
-              this.currentMapId === 'overworld' ? this.player.tileY : undefined
+              this.currentMapId === 'overworld' ? this.player.tileY : undefined,
+              this.currentMapId
             );
             if (monster) {
               this.sceneManager.push(
@@ -2233,7 +2361,9 @@ export class MapScene implements Scene {
                   this.input,
                   monster,
                   this.assetManager,
-                  () => this.handleHeroDefeat()
+                  () => this.handleHeroDefeat(),
+                  undefined,
+                  currentTile.id
                 )
               );
               return;
@@ -2508,7 +2638,46 @@ export class MapScene implements Scene {
       this.dialogueBox.render(renderer);
     }
 
-    // 8. Transição de Warp em fade
+    // 8. Transição de Warp em fade e Ceninha de Entrada da Caverna
+    if (this.warpState === 'cave_intro') {
+      renderer.clear(NES_COLORS.BLACK);
+      const elapsed = this.caveIntroTotal - this.caveIntroTimer;
+      // Fade in nos primeiros 20 frames, mantém visível, fade out nos últimos 20 frames
+      let alpha = 1;
+      if (elapsed < 20) alpha = elapsed / 20;
+      else if (this.caveIntroTimer < 20) alpha = this.caveIntroTimer / 20;
+
+      const boxSize = 128;
+      const boxX = Math.floor((CONFIG.screen.width - boxSize) / 2);
+      const boxY = 30;
+
+      renderer.fillRect(boxX - 2, boxY - 2, boxSize + 4, boxSize + 4, NES_COLORS.MED_GRAY);
+      renderer.fillRect(boxX, boxY, boxSize, boxSize, NES_COLORS.BLACK);
+
+      if (this.caveIntroImg && this.caveIntroImg.complete && this.caveIntroImg.naturalWidth > 0) {
+        renderer.ctx.save();
+        renderer.ctx.imageSmoothingEnabled = false;
+        renderer.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        renderer.ctx.drawImage(this.caveIntroImg, boxX, boxY, boxSize, boxSize);
+        renderer.ctx.restore();
+      }
+
+      const caveTitle =
+        this.pendingWarp?.targetMap === 'gruta_costa'
+          ? 'CAVERNA DO CAVALEIRO'
+          : this.pendingWarp?.targetMap === 'mina_velha'
+            ? 'MINA VELHA DE PEDRASUL'
+            : 'CAVERNA DAS SOMBRAS';
+      const titleW = renderer.measureText(caveTitle);
+      renderer.drawText(caveTitle, Math.floor((CONFIG.screen.width - titleW) / 2), boxY + boxSize + 16, {
+        color: NES_COLORS.GOLD,
+      });
+      if (alpha < 1) {
+        renderer.drawFade(1 - alpha);
+      }
+      return;
+    }
+
     if (this.warpState !== 'none') {
       renderer.drawFade(this.warpProgress);
     }

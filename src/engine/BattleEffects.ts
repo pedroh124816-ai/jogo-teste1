@@ -80,6 +80,44 @@ export class BattleEffects {
   private defeatMaxFrames = 30;
   private onDefeatComplete?: () => void;
 
+  // Cache de sprites sombreados para cavernas
+  private caveShadedCache: Map<string, HTMLCanvasElement> = new Map();
+
+  private getCaveShadedCanvas(monsterId: string, sprite: Sprite): HTMLCanvasElement {
+    const cached = this.caveShadedCache.get(monsterId);
+    if (cached && cached.width === sprite.width && cached.height === sprite.height) {
+      return cached;
+    }
+    if (typeof document === 'undefined') {
+      return sprite.canvas;
+    }
+    const c = document.createElement('canvas');
+    c.width = sprite.width;
+    c.height = sprite.height;
+    const cctx = c.getContext('2d');
+    if (!cctx) return sprite.canvas;
+
+    cctx.imageSmoothingEnabled = false;
+    cctx.drawImage(sprite.canvas, 0, 0);
+    cctx.globalCompositeOperation = 'source-atop';
+
+    // Reduz o contraste excessivo com véu escuro de caverna
+    cctx.fillStyle = 'rgba(14, 10, 22, 0.36)';
+    cctx.fillRect(0, 0, c.width, c.height);
+
+    // Sombreamento gradual mais denso na base do personagem
+    const grad = cctx.createLinearGradient(0, 0, 0, c.height);
+    grad.addColorStop(0, 'rgba(28, 18, 12, 0.10)');
+    grad.addColorStop(0.6, 'rgba(12, 10, 20, 0.25)');
+    grad.addColorStop(1, 'rgba(6, 4, 12, 0.50)');
+    cctx.fillStyle = grad;
+    cctx.fillRect(0, 0, c.width, c.height);
+
+    cctx.globalCompositeOperation = 'source-over';
+    this.caveShadedCache.set(monsterId, c);
+    return c;
+  }
+
   public update(): void {
     this.idleTimer++;
 
@@ -498,7 +536,8 @@ export class BattleEffects {
     sprite: Sprite,
     baseX: number,
     baseY: number,
-    monsterId: string
+    monsterId: string,
+    isCave = false
   ): void {
     // Se o flash estiver ativo no frame de invisibilidade, não desenha
     if (this.flashVisible) return;
@@ -511,8 +550,14 @@ export class BattleEffects {
 
     // 1. Aplica Idle Orgânico específico por espécie
     if (!this.defeatActive && !this.lungeActive) {
-      if (monsterId === 'gosma_cinza' || monsterId === 'caranguejo_vidro') {
-        // Squash & stretch senoidal da gosma
+      if (
+        monsterId === 'gosma_cinza' ||
+        monsterId === 'gosma_azul' ||
+        monsterId === 'gosma_vermelha' ||
+        monsterId === 'gosma_dourada' ||
+        monsterId === 'anemona_eletrica'
+      ) {
+        // Squash & stretch senoidal
         const bounce = Math.sin(this.idleTimer * 0.09);
         scaleX = 1 + bounce * 0.06;
         scaleY = 1 - bounce * 0.06;
@@ -521,6 +566,7 @@ export class BattleEffects {
       } else if (
         monsterId === 'corvo_manchado' ||
         monsterId === 'morcego_treva' ||
+        monsterId === 'gaivota_abissal' ||
         monsterId === 'guardiao_espectral'
       ) {
         // Flutuação aérea contínua
@@ -532,6 +578,26 @@ export class BattleEffects {
         renderY += Math.round(breathe * 1.2);
         scaleY = 1 + breathe * 0.02;
       }
+    }
+
+    const sourceCanvas = isCave ? this.getCaveShadedCanvas(monsterId, sprite) : sprite.canvas;
+
+    // Desenha sombra elíptica projetada no chão da arena sob o monstro
+    if (!this.defeatActive) {
+      const shadowCx = Math.round(baseX + sprite.width / 2);
+      const shadowCy = Math.round(baseY + sprite.height - 2 + this.lungeOffsetY);
+      const shadowRx = Math.round(sprite.width * 0.42);
+      const shadowRy = Math.max(3, Math.round(sprite.height * 0.11));
+      ctx.save();
+      ctx.fillStyle = isCave ? 'rgba(0, 0, 0, 0.62)' : 'rgba(0, 0, 0, 0.42)';
+      ctx.beginPath();
+      if (typeof ctx.ellipse === 'function') {
+        ctx.ellipse(shadowCx, shadowCy, shadowRx, shadowRy, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(shadowCx - shadowRx, shadowCy - shadowRy, shadowRx * 2, shadowRy * 2);
+      }
+      ctx.restore();
     }
 
     // 2. Renderização durante a Dissolução (Derrota)
@@ -557,7 +623,7 @@ export class BattleEffects {
         // As linhas restantes afundam levemente
         const sinkY = Math.floor(progress * 8);
         ctx.drawImage(
-          sprite.canvas,
+          sourceCanvas,
           0,
           y,
           w,
@@ -571,15 +637,19 @@ export class BattleEffects {
       return;
     }
 
-    // 3. Renderização normal com suporte a transformações
+    // 3. Renderização normal com suporte a transformações e sombreamento de caverna
     if (scaleX === 1 && scaleY === 1) {
-      renderer.drawSprite(sprite, renderX, renderY);
+      if (isCave) {
+        ctx.drawImage(sourceCanvas, Math.round(renderX), Math.round(renderY));
+      } else {
+        renderer.drawSprite(sprite, renderX, renderY);
+      }
     } else {
       const drawW = Math.round(sprite.width * scaleX);
       const drawH = Math.round(sprite.height * scaleY);
       const drawX = Math.round(renderX + (sprite.width - drawW) / 2);
       const drawY = Math.round(renderY + (sprite.height - drawH));
-      ctx.drawImage(sprite.canvas, drawX, drawY, drawW, drawH);
+      ctx.drawImage(sourceCanvas, drawX, drawY, drawW, drawH);
     }
   }
 

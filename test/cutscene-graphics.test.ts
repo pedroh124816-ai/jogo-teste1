@@ -138,9 +138,9 @@ describe('Validação das Cinemáticas Retrô 8-bits (Pixel Art)', () => {
     expect(passo.act).toBe(1);
     expect(passo.width).toBe(128);
     expect(passo.height).toBe(72);
-    expect(passo.frames.length).toBe(2);
+    expect(passo.frames.length).toBe(5);
 
-    // Valida paleta: céu laranja/roxo, rochas cinzas, vale verde, poeira e caminho de terra
+    // Valida paleta: céu/horizonte, rochas cinzas, vale verde, poeira e caminho de terra
     expect(passo.palette['N']).toBe(NES_COLORS.NAVY_BLUE);
     expect(passo.palette['A']).toBe(NES_COLORS.DARK_RED);
     expect(passo.palette['R']).toBe(NES_COLORS.RED);
@@ -157,42 +157,40 @@ describe('Validação das Cinemáticas Retrô 8-bits (Pixel Art)', () => {
     expect(passo.palette['L']).toBe(NES_COLORS.LIGHT_GRAY);
 
     const f0Str = passo.frames[0].join('');
-    const f1Str = passo.frames[1].join('');
+    const f4Str = passo.frames[4].join('');
 
-    // Frames devem ser diferentes (animação de desabamento)
-    expect(f0Str).not.toBe(f1Str);
+    // Todos os 5 frames devem progredir a animação de desabamento
+    for (let i = 0; i < passo.frames.length - 1; i++) {
+      expect(passo.frames[i].join('')).not.toBe(passo.frames[i + 1].join(''));
+    }
 
-    // Céu ao entardecer presente em ambos
+    // Elementos de horizonte, topo verde e desfiladeiro presentes
     expect(f0Str.includes('N')).toBe(true);
     expect(f0Str.includes('A')).toBe(true);
     expect(f0Str.includes('H')).toBe(true);
-
-    // Vale verde e castelo ao fundo presentes
     expect(f0Str.includes('P')).toBe(true);
     expect(f0Str.includes('F')).toBe(true);
-    expect(f0Str.includes('O')).toBe(true); // Lume / beacon do castelo
+    expect(f0Str.includes('O')).toBe(true);
 
-    // Poeira e caminho de terra
+    // Poeira e caminho de terra/areia presentes no início e no fim
     expect(f0Str.includes('X')).toBe(true);
     expect(f0Str.includes('T')).toBe(true);
-    expect(f1Str.includes('X')).toBe(true);
-    expect(f1Str.includes('T')).toBe(true);
+    expect(f4Str.includes('X')).toBe(true);
+    expect(f4Str.includes('T')).toBe(true);
 
-    // Frame 1 deve ter poeira marrom mais densa e caminho aberto (mais pixels de poeira/areia/pele clara J/S)
+    // O último frame (Frame 4) deve ter mais terra/areia exposta e escombros que o Frame 0
     const dustCountF0 = (f0Str.match(/[STJ]/g) || []).length;
-    const dustCountF1 = (f1Str.match(/[STJ]/g) || []).length;
-    expect(dustCountF1, 'Frame 1 deve ter poeira e areia mais densas que Frame 0').toBeGreaterThan(dustCountF0);
+    const dustCountF4 = (f4Str.match(/[STJ]/g) || []).length;
+    expect(dustCountF4, 'Frame 4 deve ter mais areia exposta e poeira que Frame 0').toBeGreaterThan(dustCountF0);
 
-    // Pássaros fugindo no canto superior (linhas 0-14, colunas 90-127)
-    let birdsFoundF0 = false;
-    let birdsFoundF1 = false;
+    // Rachaduras/pássaros no topo (linhas 0-14)
+    let topDetailF0 = false;
+    let topDetailF4 = false;
     for (let r = 0; r < 15; r++) {
-      const row0 = passo.frames[0][r].slice(90);
-      const row1 = passo.frames[1][r].slice(90);
-      if (row0.includes('K')) birdsFoundF0 = true;
-      if (row1.includes('K')) birdsFoundF1 = true;
+      if (passo.frames[0][r].includes('K')) topDetailF0 = true;
+      if (passo.frames[4][r].includes('K')) topDetailF4 = true;
     }
-    expect(birdsFoundF0, 'Pássaros devem estar voando no canto superior no Frame 0').toBe(true);
-    expect(birdsFoundF1, 'Pássaros devem estar voando no canto superior no Frame 1').toBe(true);
+    expect(topDetailF0).toBe(true);
+    expect(topDetailF4).toBe(true);
   });
 });

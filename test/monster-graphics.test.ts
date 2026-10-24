@@ -36,6 +36,24 @@ describe('Validação de Gráficos de Monstros (Pixel Art)', () => {
     }
   });
 
+  it('deve conter todos os 6 monstros do Ato 2 com sprites originais 32x32', () => {
+    const act2Monsters = [
+      'caranguejo_vidro',
+      'contrabandista',
+      'sirena_coral',
+      'gaivota_abissal',
+      'tartaruga_espinho',
+      'anemona_eletrica',
+    ];
+
+    for (const id of act2Monsters) {
+      const m = MONSTER_RAW_DATA[id];
+      expect(m, `Monstro do Ato 2 ${id} deve existir em MONSTER_RAW_DATA`).toBeDefined();
+      expect(m.width).toBe(32);
+      expect(m.height).toBe(32);
+    }
+  });
+
   it('ulan_fera deve possuir a Pulseira Veyra em sua arte e paleta', () => {
     const ulan = MONSTER_RAW_DATA['ulan_fera'];
     expect(ulan).toBeDefined();

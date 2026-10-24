@@ -371,6 +371,7 @@ export class TiledMap {
         nSprite === 'throne' ||
         nSprite === 'chest' ||
         nSprite === 'chest_open' ||
+        nSprite === 'crystal_altar' ||
         nSprite === 'door'
       ) {
         continue;
@@ -401,13 +402,14 @@ export class TiledMap {
         const sprite = assetManager.getTile(spriteId);
         const screenPos = camera.toScreen(tx * this.tileSize, ty * this.tileSize);
 
-        // Objetos com fundo transparente (cadeira/trono, baú, barril, vaso) recebem o piso vizinho por baixo
+        // Objetos com fundo transparente (cadeira/trono, baú, barril, vaso, altar) recebem o piso vizinho por baixo
         if (
           spriteId === 'barrel' ||
           spriteId === 'pot' ||
           spriteId === 'throne' ||
           spriteId === 'chest' ||
-          spriteId === 'chest_open'
+          spriteId === 'chest_open' ||
+          spriteId === 'crystal_altar'
         ) {
           renderer.drawSprite(
             assetManager.getTile(this.findUnderlaySprite(tx, ty)),

@@ -11272,7 +11272,7 @@
         5,
         5,
         5,
-        5,
+        19,
         5,
         5,
         5,
@@ -11400,7 +11400,7 @@
         9,
         9,
         1,
-        5,
+        7,
         5,
         5,
         1,
@@ -16867,6 +16867,27 @@
               "name": "text",
               "type": "string",
               "value": "Acesso à Ponte do Sul rumo ao Porto do Sol."
+            }
+          ]
+        },
+        {
+          "id": 994,
+          "name": "saida_floresta_secreta",
+          "type": "sign",
+          "x": 1024,
+          "y": 1392,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "ESCARPA DO BOSQUE OCULTO"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "Um barranco íngreme de rocha.\nA trilha desce do Bosque Oculto,\nmas só é possível chegar lá\natravessando os 3 andares da\nCaverna do Cavaleiro!"
             }
           ]
         }

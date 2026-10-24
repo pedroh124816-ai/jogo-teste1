@@ -125,10 +125,11 @@ export const ENCOUNTER_TABLES: Record<string, EncounterWeight[]> = {
     { monsterId: 'gosma_dourada', weight: 5 },
   ],
   sand: [
-    { monsterId: 'lebre_cinza', weight: 25 },
-    { monsterId: 'gosma_azul', weight: 35 },
-    { monsterId: 'corvo_manchado', weight: 25 },
-    { monsterId: 'caranguejo_vidro', weight: 15 },
+    { monsterId: 'caranguejo_vidro', weight: 30 },
+    { monsterId: 'tartaruga_espinho', weight: 25 },
+    { monsterId: 'sirena_coral', weight: 20 },
+    { monsterId: 'gaivota_abissal', weight: 15 },
+    { monsterId: 'gosma_azul', weight: 10 },
   ],
   tree: [
     { monsterId: 'lebre_cinza', weight: 20 },
@@ -144,12 +145,15 @@ export const ENCOUNTER_TABLES: Record<string, EncounterWeight[]> = {
   cave_floor: [
     { monsterId: 'morcego_treva', weight: 45 },
     { monsterId: 'mineiro_louco', weight: 35 },
-    { monsterId: 'gosma_azul', weight: 20 },
+    { monsterId: 'anemona_eletrica', weight: 20 },
   ],
   costa_sol: [
-    { monsterId: 'caranguejo_vidro', weight: 40 },
-    { monsterId: 'gosma_azul', weight: 35 },
-    { monsterId: 'contrabandista', weight: 25 },
+    { monsterId: 'caranguejo_vidro', weight: 22 },
+    { monsterId: 'contrabandista', weight: 20 },
+    { monsterId: 'tartaruga_espinho', weight: 20 },
+    { monsterId: 'sirena_coral', weight: 16 },
+    { monsterId: 'gaivota_abissal', weight: 14 },
+    { monsterId: 'gosma_azul', weight: 8 },
   ],
   pantano_brumaterra: [
     { monsterId: 'sapo_lume', weight: 40 },
@@ -159,8 +163,9 @@ export const ENCOUNTER_TABLES: Record<string, EncounterWeight[]> = {
   ],
   montanhas_pedrasul: [
     { monsterId: 'rochedo_vivo', weight: 45 },
-    { monsterId: 'lobo_sombrio', weight: 30 },
-    { monsterId: 'gosma_vermelha', weight: 25 },
+    { monsterId: 'gaivota_abissal', weight: 25 },
+    { monsterId: 'lobo_sombrio', weight: 20 },
+    { monsterId: 'gosma_vermelha', weight: 10 },
   ],
   planalto_cobreval: [
     { monsterId: 'golem_cobre', weight: 50 },
@@ -173,15 +178,54 @@ export const ENCOUNTER_TABLES: Record<string, EncounterWeight[]> = {
     { monsterId: 'golem_cobre', weight: 30 },
     { monsterId: 'gosma_dourada', weight: 10 },
   ],
+  gruta_costa_b1: [
+    { monsterId: 'anemona_eletrica', weight: 30 },
+    { monsterId: 'caranguejo_vidro', weight: 25 },
+    { monsterId: 'sirena_coral', weight: 20 },
+    { monsterId: 'escorpiao_cristal', weight: 15 },
+    { monsterId: 'morcego_treva', weight: 10 },
+  ],
+  gruta_costa_b2: [
+    { monsterId: 'anemona_eletrica', weight: 25 },
+    { monsterId: 'escorpiao_cristal', weight: 25 },
+    { monsterId: 'sentinela_antiga', weight: 25 },
+    { monsterId: 'contrabandista', weight: 15 },
+    { monsterId: 'sirena_coral', weight: 10 },
+  ],
+  gruta_costa_b3: [
+    { monsterId: 'salamandra_lava', weight: 40 },
+    { monsterId: 'sentinela_antiga', weight: 35 },
+    { monsterId: 'gosma_vermelha', weight: 20 },
+    { monsterId: 'gosma_dourada', weight: 5 },
+  ],
+  floresta_secreta: [
+    { monsterId: 'lobo_sombrio', weight: 35 },
+    { monsterId: 'tronco_palido', weight: 30 },
+    { monsterId: 'escorpiao_cristal', weight: 25 },
+    { monsterId: 'gosma_dourada', weight: 10 },
+  ],
 };
 
 /**
- * Seleciona aleatoriamente um monstro com base no terreno e (opcionalmente) na coordenada do overworld.
+ * Seleciona aleatoriamente um monstro com base no terreno e (opcionalmente) na coordenada do overworld ou ID do mapa.
  */
-export function rollEncounterForTerrain(terrainId: string, tileX?: number, tileY?: number): MonsterDef | null {
+export function rollEncounterForTerrain(
+  terrainId: string,
+  tileX?: number,
+  tileY?: number,
+  mapId?: string
+): MonsterDef | null {
   let tableKey = terrainId;
 
-  if (tileX !== undefined && tileY !== undefined) {
+  if (mapId === 'gruta_costa') {
+    tableKey = 'gruta_costa_b1';
+  } else if (mapId === 'gruta_costa_b2') {
+    tableKey = 'gruta_costa_b2';
+  } else if (mapId === 'gruta_costa_b3') {
+    tableKey = 'gruta_costa_b3';
+  } else if (mapId === 'floresta_secreta') {
+    tableKey = 'floresta_secreta';
+  } else if (tileX !== undefined && tileY !== undefined) {
     if (tileY >= 104 && tileX >= 50 && tileX <= 80) {
       tableKey = 'ilha_veyra';
     } else if (tileY >= 70 && tileX >= 36 && tileX <= 74) {

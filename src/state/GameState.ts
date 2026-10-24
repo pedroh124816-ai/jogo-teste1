@@ -64,6 +64,11 @@ export const LEVEL_TABLE: Record<number, LevelStats> = {
   13: { expNeeded: 1973, maxHp: 123, maxMp: 62, baseAtk: 58, baseDef: 44, agi: 34 },
   14: { expNeeded: 2643, maxHp: 134, maxMp: 68, baseAtk: 64, baseDef: 49, agi: 37 },
   15: { expNeeded: 3493, maxHp: 146, maxMp: 75, baseAtk: 71, baseDef: 55, agi: 40 },
+  16: { expNeeded: 4543, maxHp: 160, maxMp: 83, baseAtk: 79, baseDef: 61, agi: 43 },
+  17: { expNeeded: 5843, maxHp: 175, maxMp: 92, baseAtk: 87, baseDef: 68, agi: 47 },
+  18: { expNeeded: 7443, maxHp: 192, maxMp: 102, baseAtk: 96, baseDef: 75, agi: 51 },
+  19: { expNeeded: 9393, maxHp: 210, maxMp: 112, baseAtk: 105, baseDef: 83, agi: 55 },
+  20: { expNeeded: 11793, maxHp: 230, maxMp: 125, baseAtk: 116, baseDef: 92, agi: 60 },
 };
 
 export class GameState {
@@ -428,7 +433,7 @@ export class GameState {
     const prevDef = this.baseDef;
     const prevAgi = this.agi;
 
-    while (this.level < 15) {
+    while (this.level < 20) {
       const nextLevel = this.level + 1;
       const nextStats = LEVEL_TABLE[nextLevel];
       if (!nextStats || this.exp < nextStats.expNeeded) {
@@ -464,7 +469,7 @@ export class GameState {
   }
 
   public getExpForNextLevel(): number {
-    if (this.level >= 15) return 0;
+    if (this.level >= 20) return 0;
     const nextStats = LEVEL_TABLE[this.level + 1];
     if (!nextStats) return 0;
     return Math.max(0, nextStats.expNeeded - this.exp);
