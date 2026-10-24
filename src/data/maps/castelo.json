@@ -474,7 +474,7 @@
         20,
         6,
         20,
-        20,
+        22,
         20,
         6,
         31,
@@ -2004,6 +2004,27 @@
               "name": "dialogue",
               "type": "string",
               "value": "[NOME]... a prova está\nno meu alforje. Não\nconfie em Vael.\n---\nNão foi um monstro.\nFoi só conveniência,\ne todos obedeceram."
+            }
+          ]
+        },
+        {
+          "id": 48,
+          "name": "placa_aposentos",
+          "type": "sign",
+          "x": 432,
+          "y": 160,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "APOSENTOS DO HERÓI"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "Aposentos Reais do Herói.\nUma cama confortável de dossel\naguarda após as batalhas."
             }
           ]
         }

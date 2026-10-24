@@ -86,4 +86,18 @@ describe('Etapa 6 - Fatia Vertical do Ato 1 Completo e Refinamentos', () => {
     const culpado = gameState.flags.ensureBrindeCulpado();
     expect(['brenn', 'hald', 'vael']).toContain(culpado);
   });
+
+  it('apos vencer a Fera, possui Aposentos do Herói no castelo com cama e placa, e terremoto abre o Passo', () => {
+    const casteloMap = new TiledMap('castelo', casteloData as any);
+    const placaAposentos = casteloMap.signs.find(s => s.title === 'APOSENTOS DO HERÓI');
+    expect(placaAposentos).toBeDefined();
+
+    const overworldMap = new TiledMap('overworld', overworldData as any);
+    const placaPasso = overworldMap.signs.find(s => s.title === 'PASSO DO SANTUÁRIO');
+    expect(placaPasso).toBeDefined();
+
+    // Valida que o tile da cama existe no quarto do castelo em (34, 10)
+    const bedTile = casteloMap.getTileAt(34, 10);
+    expect(bedTile?.id).toBe('bed');
+  });
 });

@@ -147,17 +147,28 @@ export class MapScene implements Scene {
 
     // Alterações dinâmicas de terreno no overworld conforme progressão de Atos
     if (mapId === 'overworld') {
-      // Ato 2: Ponte do Sul (48, 68..70) abre após concluir o Ato 1 (Selo Real);
-      // o Passo do Santuário (82, 41..43) só desaba no Terremoto que se segue.
+      // Ato 2: Ponte do Sul (48, 68..70) abre após concluir o Ato 1 (Selo Real)
       if (!gameState.getFlag('ato1_concluido')) {
         this.currentMap.setTileAt(48, 68, 'water');
         this.currentMap.setTileAt(48, 69, 'water');
         this.currentMap.setTileAt(48, 70, 'water');
       }
-      if (!gameState.getFlag('ato1_concluido') || !gameState.getFlag('terremoto_visto')) {
-        this.currentMap.setTileAt(82, 41, 'high_mountain');
-        this.currentMap.setTileAt(82, 42, 'high_mountain');
-        this.currentMap.setTileAt(82, 43, 'high_mountain');
+
+      // Passo do Santuário (82, 39..45 e 83, 40..45) desaba no terremoto do Ato 1
+      if (!gameState.getFlag('terremoto_visto')) {
+        this.currentMap.setTileAt(82, 39, 'high_mountain');
+        for (let y = 40; y <= 45; y++) {
+          this.currentMap.setTileAt(82, y, 'high_mountain');
+          this.currentMap.setTileAt(83, y, 'high_mountain');
+        }
+      } else {
+        // Desmoronamento abre a passagem com trilha de terra e rochas caídas
+        this.currentMap.setTileAt(82, 39, 'path');
+        this.currentMap.setTileAt(83, 39, 'grass');
+        for (let y = 40; y <= 45; y++) {
+          this.currentMap.setTileAt(82, y, 'path');
+          this.currentMap.setTileAt(83, y, 'path');
+        }
       }
 
       // Ato 3: Ponte do Pântano (30, 68..70) e Passo de Pedrasul (36, 37..39) só abrem após concluir o Ato 2
@@ -979,6 +990,24 @@ export class MapScene implements Scene {
     }
 
     if (npc.name === 'Capitã Marta' && this.currentMapId === 'castelo') {
+      if (gameState.getFlag('terremoto_visto') && !gameState.getFlag('ato1_concluido')) {
+        this.dialogueBox.start(
+          npc.name,
+          'O desfiladeiro a leste desabou\ncom o tremor da noite!\n---\nO Rei Auren o aguarda com\nurgência no Salão do Trono!',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
+      if (gameState.getFlag('fera_derrotada') && !gameState.getFlag('terremoto_visto')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Parabéns pela vitória na\nCaverna, [NOME]!\n---\nO Rei ordenou que você descanse.\nSeus Aposentos ficam na Ala Leste\n(suba pelo corredor à direita).',
+          () => npc.resetDirection()
+        );
+        return;
+      }
+
       if (gameState.getFlag('selo_veyra_obtido')) {
         this.dialogueBox.start(
           npc.name,
@@ -1270,10 +1299,42 @@ export class MapScene implements Scene {
         return;
       }
 
+      // 1. Pós-Terremoto: herói descansou nos Aposentos, a cutscene do terremoto passou e o Rei o orienta
+      if (gameState.getFlag('terremoto_visto') && !gameState.getFlag('ato1_concluido')) {
+        this.dialogueBox.start(
+          npc.name,
+          '[NOME], você sentiu a terra\ntremer durante a noite? O som\nveio do desfiladeiro ao leste!\n---\nNossas sentinelas confirmaram:\na grande barreira do Passo do\nSantuário desabou!\n---\nO caminho entre as montanhas\nestá aberto pela primeira vez\nem décadas rumo ao sul!\n---\nTome o Selo Real e 50 Moedas de\nOuro. Vá ao sul, atravesse o\nPasso e chegue ao Porto do Sol!\n---\n[FIM DO ATO 1: O Passo Aberto - Rumo ao Sul!]',
+          () => {
+            gameState.setFlag('ato1_concluido', true);
+            gameState.setFlag('vael_patrono', true);
+            gameState.addItem('selo_real', 1);
+            gameState.addGold(50);
+            soundManager.playSfx('victory');
+            gameState.saveGame(this.currentMapId, this.player.tileX, this.player.tileY, this.player.direction);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
+      // 2. Herói derrotou a fera na Caverna das Sombras e volta com a Pulseira Antiga
+      if (gameState.getFlag('fera_derrotada') && !gameState.getFlag('terremoto_visto')) {
+        this.dialogueBox.start(
+          npc.name,
+          'Bravo, [NOME]! Você venceu a\nterrível criatura na Caverna das\nSombras e trouxe a Pulseira Antiga!\n---\nO Rei Daros e o Príncipe Dagan\njá chegaram ao castelo para o\nnosso banquete de aliança.\n---\nMas vejo que você está exausto\nde tão árdua batalha. Vá aos\nAposentos do Herói na Ala Leste.\n---\nDeite-se em sua cama e descanse!\nAmanhã celebraremos seu triunfo!',
+          () => {
+            gameState.setFlag('rei_mandou_descansar', true);
+            gameState.saveGame(this.currentMapId, this.player.tileX, this.player.tileY, this.player.direction);
+            npc.resetDirection();
+          }
+        );
+        return;
+      }
+
       if (gameState.getFlag('ato1_concluido')) {
         this.dialogueBox.start(
           npc.name,
-          'Siga ao sul até o Porto\ndo Sol e a Gruta da Costa,\ne visite o Santuário!',
+          'Siga pelo Passo do Santuário\nou pela ponte ao sul, [NOME].\n---\nInvestigue a costa e os rumores\nsobre o Grande Lume no Porto do Sol!\nQue a luz guie sua jornada.',
           () => npc.resetDirection()
         );
         return;
@@ -1488,6 +1549,20 @@ export class MapScene implements Scene {
         this.dialogueBox.start(sign.title || 'VAPOR DA MARÉ', sign.text);
         return true;
       }
+      if (sign.id === 'placa_passo' || sign.title === 'PASSO DO SANTUÁRIO') {
+        const text = gameState.getFlag('terremoto_visto')
+          ? 'PASSO DO SANTUÁRIO:\nO desmoronamento recente abriu\num caminho de terra e pedregulhos\nentre as montanhas rumo ao sul!'
+          : 'PASSO DO SANTUÁRIO:\nDesfiladeiro rochoso a leste.\nRochas maciças barram a passagem.\nNenhum caminho a pé.';
+        this.dialogueBox.start(sign.title || 'PASSO DO SANTUÁRIO', text);
+        return true;
+      }
+      if (sign.id === 'placa_aposentos' || sign.title === 'APOSENTOS DO HERÓI') {
+        this.dialogueBox.start(
+          sign.title || 'APOSENTOS DO HERÓI',
+          'Aposentos Reais do Herói.\nUma cama confortável de dossel\naguarda após as batalhas.'
+        );
+        return true;
+      }
       if (sign.setFlag) {
         gameState.setFlag(sign.setFlag, true);
       }
@@ -1575,6 +1650,12 @@ export class MapScene implements Scene {
       } else {
         this.dialogueBox.start('POÇO', 'Um poço de pedra antigo.\nA água corre fria lá\nno fundo.');
       }
+      return true;
+    }
+
+    // 4.5 Interação com Cama ('bed')
+    if (facingTile && facingTile.id === 'bed') {
+      this.interactWithBed();
       return true;
     }
 
@@ -1684,6 +1765,93 @@ export class MapScene implements Scene {
       }
       return;
     }
+  }
+
+  /**
+   * Interação com a cama nos Aposentos do Herói ou estalagens
+   */
+  private interactWithBed(): void {
+    const isPostBossRest = gameState.getFlag('fera_derrotada') && !gameState.getFlag('terremoto_visto');
+
+    const promptText = isPostBossRest
+      ? 'Esta é a sua cama macia nos Aposentos Reais.\nDeseja deitar e descansar após a árdua batalha?'
+      : 'Deseja descansar em sua cama para restaurar PV e PM?';
+
+    this.dialogueBox.startWithChoice(
+      'APOSENTOS DO HERÓI',
+      promptText,
+      ['Descansar', 'Agora não'],
+      (choiceIdx) => {
+        if (choiceIdx !== 0) return;
+
+        // Recupera PV e PM do herói
+        gameState.hp = gameState.maxHp;
+        gameState.mp = gameState.maxMp;
+        soundManager.playSfx('inn');
+
+        if (isPostBossRest) {
+          this.triggerNightEarthquakeSequence();
+        } else {
+          this.dialogueBox.start(
+            'APOSENTOS DO HERÓI',
+            'Você descansou profundamente.\nSeu PV e PM foram completamente restaurados!'
+          );
+        }
+      }
+    );
+  }
+
+  /**
+   * Cinemática dramática do terremoto do Passo durante o sono do herói
+   */
+  private triggerNightEarthquakeSequence(): void {
+    this.dialogueBox.start(
+      'APOSENTOS DO HERÓI',
+      'Você se deita na cama macia.\nO cansaço da batalha o vence e\nvocê adormece profundamente...\n---\n...',
+      () => {
+        // Terremoto sacode o castelo
+        this.quakeTimer = 45;
+        soundManager.playSfx('hit');
+
+        // Abre a VignetteScene com a arte do terremoto
+        const vignette = new VignetteScene(
+          this.sceneManager,
+          this.input,
+          'terremoto_passo',
+          'O Passo Desaba',
+          [
+            'Durante a calada da noite,\no solo estremece com extrema\nviolência!',
+            'Um estrondo ensurdecedor ecoa\npelas montanhas a leste do reino...\nPedras rolam pelo vale!',
+            'A grande muralha rochosa do\ndesfiladeiro racha e desmorona\nnuma imensa nuvem de poeira!',
+            'Uma fresta ampla se abre entre\nas rochas caídas, revelando o\ncaminho do Passo do Santuário!',
+          ],
+          () => {
+            this.sceneManager.pop();
+
+            // Retorna ao quarto pela manhã
+            gameState.setFlag('terremoto_visto', true);
+            gameState.setFlag('passo_desabado', true);
+            gameState.setFlag('rei_aguarda_pos_terremoto', true);
+            soundManager.playSfx('stairs');
+
+            // Capitã Marta acorda o herói com a notícia urgente
+            this.dialogueBox.start(
+              'CAPITÃ MARTA',
+              'Herói, acorde! Você sentiu esse\ntremor estarrecedor?!\n---\nAs sentinelas relataram que o\ndesfiladeiro do leste desabou\ndurante a noite!\n---\nO Rei Auren o convoca com a\nmáxima urgência ao Salão do Trono!',
+              () => {
+                gameState.saveGame(
+                  this.currentMapId,
+                  this.player.tileX,
+                  this.player.tileY,
+                  this.player.direction
+                );
+              }
+            );
+          }
+        );
+        this.sceneManager.push(vignette);
+      }
+    );
   }
 
   /**
@@ -2158,10 +2326,13 @@ export class MapScene implements Scene {
 
   /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e exibe a vinheta cinematográfica. */
   private finishEarthquake(): void {
-    const original = new TiledMap('overworld', MAP_REGISTRY['overworld'].json);
-    for (let y = 41; y <= 43; y++) {
-      const def = original.getTileAt(82, y);
-      if (def) this.currentMap.setTileAt(82, y, def.id);
+    if (this.currentMapId === 'overworld') {
+      this.currentMap.setTileAt(82, 39, 'path');
+      this.currentMap.setTileAt(83, 39, 'grass');
+      for (let y = 40; y <= 45; y++) {
+        this.currentMap.setTileAt(82, y, 'path');
+        this.currentMap.setTileAt(83, y, 'path');
+      }
     }
     soundManager.playSfx('stairs');
     const vignette = new VignetteScene(
@@ -2177,6 +2348,8 @@ export class MapScene implements Scene {
       ],
       () => {
         this.sceneManager.pop();
+        gameState.setFlag('terremoto_visto', true);
+        gameState.setFlag('passo_desabado', true);
       }
     );
     this.sceneManager.push(vignette);

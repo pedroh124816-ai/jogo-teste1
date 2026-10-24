@@ -5018,7 +5018,7 @@
         1,
         1,
         1,
-        1,
+        22,
         1,
         1,
         1,
@@ -16825,6 +16825,27 @@
               "name": "text",
               "type": "string",
               "value": "Santuário Celeste dos Antigos.\nApenas viajantes dos céus\npodem transpor as montanhas."
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "name": "placa_passo",
+          "type": "sign",
+          "x": 1312,
+          "y": 608,
+          "width": 16,
+          "height": 16,
+          "properties": [
+            {
+              "name": "title",
+              "type": "string",
+              "value": "PASSO DO SANTUÁRIO"
+            },
+            {
+              "name": "text",
+              "type": "string",
+              "value": "PASSO DO SANTUÁRIO:\nDesfiladeiro rochoso a leste.\nRochas maciças barram a passagem."
             }
           ]
         }
