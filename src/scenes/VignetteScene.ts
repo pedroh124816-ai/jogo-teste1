@@ -6,6 +6,7 @@ import { NES_COLORS } from '../engine/Palette';
 import { CONFIG } from '../config';
 import { getCutsceneCanvas, getCutsceneData, CutsceneGraphicData } from '../assets/cutsceneGraphics';
 import { soundManager } from '../engine/AudioManager';
+import { gameState } from '../state/GameState';
 
 export class VignetteScene implements Scene {
   public readonly name = 'VignetteScene';
@@ -37,41 +38,51 @@ export class VignetteScene implements Scene {
   ) {
     this.input = input;
     this.cutsceneId = cutsceneId;
-    this.speakerName = speakerName;
+    this.speakerName = gameState.interpolateText(speakerName);
     this.onFinished = onFinished;
 
     const rawPages = Array.isArray(textOrPages)
       ? textOrPages
-      : textOrPages.split(/\n---\n|\n\n/).map((p) => p.trim());
+      : textOrPages.split(/\n\s*---\s*\n|\n\n/).map((p) => p.trim());
 
-    this.pages = rawPages.map((p) => this.wrapPageText(p, 27));
+    this.pages = [];
+    for (const rawPage of rawPages) {
+      const interpolated = gameState.interpolateText(rawPage);
+      this.pages.push(...this.paginatePageText(interpolated, 27, 3));
+    }
 
     this.data = getCutsceneData(cutsceneId);
   }
 
-  private wrapPageText(page: string, maxCharsPerLine = 27): string {
-    const rawLines = page.split('\n');
-    const wrapped: string[] = [];
-    for (const rawLine of rawLines) {
-      if (rawLine.length <= maxCharsPerLine) {
-        wrapped.push(rawLine);
-        continue;
-      }
-      const words = rawLine.split(' ');
+  private paginatePageText(page: string, maxCharsPerLine = 27, maxLinesPerPage = 3): string[] {
+    const rawLines = page.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    const allFit = rawLines.every((l) => l.length <= maxCharsPerLine);
+
+    let lines: string[] = [];
+    if (allFit && rawLines.length > 0 && rawLines.length <= maxLinesPerPage) {
+      lines = rawLines;
+    } else {
+      const words = page.replace(/\n+/g, ' ').split(/\s+/);
       let current = '';
       for (const word of words) {
+        if (!word) continue;
         if (!current) {
           current = word;
         } else if (current.length + 1 + word.length <= maxCharsPerLine) {
           current += ' ' + word;
         } else {
-          wrapped.push(current);
+          lines.push(current);
           current = word;
         }
       }
-      if (current) wrapped.push(current);
+      if (current) lines.push(current);
     }
-    return wrapped.join('\n');
+
+    const resultPages: string[] = [];
+    for (let i = 0; i < lines.length; i += maxLinesPerPage) {
+      resultPages.push(lines.slice(i, i + maxLinesPerPage).join('\n'));
+    }
+    return resultPages.length > 0 ? resultPages : ['...'];
   }
 
   public enter(): void {

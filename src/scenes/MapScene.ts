@@ -54,6 +54,7 @@ export class MapScene implements Scene {
   private warpState: WarpState = 'none';
   private warpProgress = 0;
   private quakeTimer = 0;
+  private onQuakeFinishedCallback: (() => void) | null = null;
 
   /** Colisão consciente do meio de transporte (a pé, de barco ou de balão). */
   private readonly transportSolidMap: ISolidMap = {
@@ -154,22 +155,25 @@ export class MapScene implements Scene {
 
     // Alterações dinâmicas de terreno no overworld conforme progressão de Atos
     if (mapId === 'overworld') {
-      // Ato 2: Ponte do Sul (48, 68..70) abre após concluir o Ato 1 (Selo Real)
-      if (!gameState.getFlag('ato1_concluido')) {
-        this.currentMap.setTileAt(48, 68, 'water');
-        this.currentMap.setTileAt(48, 69, 'water');
-        this.currentMap.setTileAt(48, 70, 'water');
-      }
-
-      // Passo do Santuário (82, 39..45 e 83, 40..45) desaba no terremoto do Ato 1
+      // A Ponte do Sul (48, 68..70) já existe desde o início, mas uma barreira de montanha
+      // de 3 blocos centrais (47..49, 66..67) bloqueia o acesso até o terremoto do Ato 1,
+      // assim como o Passo do Santuário (82..83, 39..45).
       if (!gameState.getFlag('terremoto_visto')) {
+        for (let x = 47; x <= 49; x++) {
+          this.currentMap.setTileAt(x, 66, 'high_mountain');
+          this.currentMap.setTileAt(x, 67, 'high_mountain');
+        }
         this.currentMap.setTileAt(82, 39, 'high_mountain');
         for (let y = 40; y <= 45; y++) {
           this.currentMap.setTileAt(82, y, 'high_mountain');
           this.currentMap.setTileAt(83, y, 'high_mountain');
         }
       } else {
-        // Desmoronamento abre a passagem com trilha de terra e rochas caídas
+        // O terremoto derruba os 3 blocos centrais da montanha, liberando o caminho para a Ponte do Sul e para o Passo
+        for (let x = 47; x <= 49; x++) {
+          this.currentMap.setTileAt(x, 66, 'path');
+          this.currentMap.setTileAt(x, 67, 'path');
+        }
         this.currentMap.setTileAt(82, 39, 'path');
         this.currentMap.setTileAt(83, 39, 'grass');
         for (let y = 40; y <= 45; y++) {
@@ -958,10 +962,14 @@ export class MapScene implements Scene {
                     'Rei Daros tomba! As tropas de\nAuren tomam a fortaleza\nem chamas ardentes!',
                     'Você nos traiu, [NOME]!\nEu recebi você como um irmão!',
                     'Dagan corta os cabos da\nPonte de Cobre e foge para\nas montanhas do norte!',
-                    'Volte ao Castelo Real e\nconfronte o Rei Auren!\n[FIM DO ATO 3]',
+                    'Volte ao Castelo Real e\nconfronte o Rei Auren!',
                   ],
                   () => {
                     this.sceneManager.pop();
+                    this.dialogueBox.start(
+                      'CRÔNICAS DE LUMINÁRIO',
+                      '=== FIM DO ATO 3 ===\nA Fortaleza de Cobre caiu.\nRetorne ao Castelo Real!'
+                    );
                   }
                 );
                 this.sceneManager.push(vignette);
@@ -1141,12 +1149,24 @@ export class MapScene implements Scene {
                       gameState.setFlag('iris_perdoada', true);
                       this.dialogueBox.start(
                         'Íris',
-                        'Você perdoa Íris. Ela\npromete ajudar Olívia a\nguiar o Santuário!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra! [FIM DO ATO 4]'
+                        'Você perdoa Íris. Ela\npromete ajudar Olívia a\nguiar o Santuário!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra!',
+                        () => {
+                          this.dialogueBox.start(
+                            'CRÔNICAS DE LUMINÁRIO',
+                            '=== FIM DO ATO 4 ===\nO Santuário foi libertado.\nRumo à Ilha Veyra!'
+                          );
+                        }
                       );
                     } else {
                       this.dialogueBox.start(
                         'Irmã Olívia',
-                        'Íris parte em exílio.\nOlívia assume o Santuário\ne liberta os cativos!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra! [FIM DO ATO 4]'
+                        'Íris parte em exílio.\nOlívia assume o Santuário\ne liberta os cativos!\n---\nVá ao Porto do Sol rumo à\nIlha Veyra!',
+                        () => {
+                          this.dialogueBox.start(
+                            'CRÔNICAS DE LUMINÁRIO',
+                            '=== FIM DO ATO 4 ===\nO Santuário foi libertado.\nRumo à Ilha Veyra!'
+                          );
+                        }
                       );
                     }
                   }
@@ -1296,11 +1316,15 @@ export class MapScene implements Scene {
       if (gameState.getFlag('ato1_concluido') && brascaDone && santuarioDone) {
         this.dialogueBox.start(
           npc.name,
-          'Então a costa está segura\ne o Santuário abençoou\nsua jornada, [NOME]!\n---\nAgora vá cobrar a aliança\nde Olo em Vau-Cinza e de\nMaren em Rochedo!\n---\nTome 100 de ouro para a\nexpedição às fronteiras!\n[FIM DO ATO 2]',
+          'Então a costa está segura\ne o Santuário abençoou\nsua jornada, [NOME]!\n---\nAgora vá cobrar a aliança\nde Olo em Vau-Cinza e de\nMaren em Rochedo!\n---\nTome 100 de ouro para a\nexpedição às fronteiras!',
           () => {
             gameState.setFlag('ato2_concluido', true);
             gameState.addGold(100);
             npc.resetDirection();
+            this.dialogueBox.start(
+              'CRÔNICAS DE LUMINÁRIO',
+              'CAPÍTULO II CONCLUÍDO:\nAs Brumas da Costa\n\n- Rumo às Fronteiras do Norte -'
+            );
           }
         );
         return;
@@ -1310,7 +1334,7 @@ export class MapScene implements Scene {
       if (gameState.getFlag('terremoto_visto') && !gameState.getFlag('ato1_concluido')) {
         this.dialogueBox.start(
           npc.name,
-          '[NOME], você sentiu a terra\ntremer durante a noite? O som\nveio do desfiladeiro ao leste!\n---\nNossas sentinelas confirmaram:\na grande barreira do Passo do\nSantuário desabou!\n---\nO caminho entre as montanhas\nestá aberto pela primeira vez\nem décadas rumo ao sul!\n---\nTome o Selo Real e 50 Moedas de\nOuro. Vá ao sul, atravesse o\nPasso e chegue ao Porto do Sol!\n---\n[FIM DO ATO 1: O Passo Aberto - Rumo ao Sul!]',
+          '[NOME], você sentiu a terra\ntremer durante a noite? O abalo\nsacudiu as montanhas do reino!\n---\nNossas sentinelas confirmaram:\na barreira rochosa diante da\nPonte do Sul e do Passo desabou!\n---\nO acesso à ponte e ao sul\nestá aberto pela primeira vez\nem décadas!\n---\nTome o Selo Real e 50 Moedas de\nOuro. Cruze a Ponte do Sul e\ninvestigue o Porto do Sol!',
           () => {
             gameState.setFlag('ato1_concluido', true);
             gameState.setFlag('vael_patrono', true);
@@ -1319,6 +1343,10 @@ export class MapScene implements Scene {
             soundManager.playSfx('victory');
             gameState.saveGame(this.currentMapId, this.player.tileX, this.player.tileY, this.player.direction);
             npc.resetDirection();
+            this.dialogueBox.start(
+              'CRÔNICAS DE LUMINÁRIO',
+              'CAPÍTULO I CONCLUÍDO:\nA Sombra no Poço\n\n- O Caminho para o Sul se Abre -'
+            );
           }
         );
         return;
@@ -1341,7 +1369,7 @@ export class MapScene implements Scene {
       if (gameState.getFlag('ato1_concluido')) {
         this.dialogueBox.start(
           npc.name,
-          'Siga pelo Passo do Santuário\nou pela ponte ao sul, [NOME].\n---\nInvestigue a costa e os rumores\nsobre o Grande Lume no Porto do Sol!\nQue a luz guie sua jornada.',
+          'Cruze a Ponte do Sul ou o\nPasso do Santuário, [NOME].\n---\nInvestigue a costa e os rumores\nsobre o Grande Lume no Porto do Sol!\nQue a luz guie sua jornada.',
           () => npc.resetDirection()
         );
         return;
@@ -1350,13 +1378,17 @@ export class MapScene implements Scene {
       if (gameState.getFlag('brinde_resolvido')) {
         this.dialogueBox.start(
           npc.name,
-          'Você salvou a aliança,\n[NOME]! Mas o veneno\nveio pelo mar do sul.\n---\nTome o Selo Real e 50 de\nouro. Siga ao sul até o\nPorto do Sol!\n---\n[FIM DO ATO 1: A Sombra\nno Poço - Rumo ao Sul!]',
+          'Você salvou a aliança,\n[NOME]! Mas o veneno\nveio pelo mar do sul.\n---\nTome o Selo Real e 50 de\nouro. Siga ao sul até o\nPorto do Sol!',
           () => {
             gameState.setFlag('vael_patrono', true);
             gameState.setFlag('ato1_concluido', true);
             gameState.addItem('selo_real', 1);
             gameState.addGold(50);
             npc.resetDirection();
+            this.dialogueBox.start(
+              'CRÔNICAS DE LUMINÁRIO',
+              'CAPÍTULO I CONCLUÍDO:\nA Sombra no Poço\n\n- O Caminho para o Sul se Abre -'
+            );
           }
         );
         return;
@@ -1561,6 +1593,13 @@ export class MapScene implements Scene {
           ? 'PASSO DO SANTUÁRIO:\nO desmoronamento recente abriu\num caminho de terra e pedregulhos\nentre as montanhas rumo ao sul!'
           : 'PASSO DO SANTUÁRIO:\nDesfiladeiro rochoso a leste.\nRochas maciças barram a passagem.\nNenhum caminho a pé.';
         this.dialogueBox.start(sign.title || 'PASSO DO SANTUÁRIO', text);
+        return true;
+      }
+      if (sign.id === 'placa_ponte_sul' || sign.title === 'PASSO DA PONTE DO SUL') {
+        const text = gameState.getFlag('terremoto_visto')
+          ? 'PASSO DA PONTE DO SUL:\nO terremoto derrubou o trecho\ncentral da rocha, liberando a\npassagem para a Ponte do Sul!'
+          : 'PASSO DA PONTE DO SUL:\nUma parede rochosa bloqueia o\nacesso à Ponte do Sul.';
+        this.dialogueBox.start(sign.title || 'PASSO DA PONTE DO SUL', text);
         return true;
       }
       if (sign.id === 'placa_aposentos' || sign.title === 'APOSENTOS DO HERÓI') {
@@ -1831,47 +1870,49 @@ export class MapScene implements Scene {
       'APOSENTOS DO HERÓI',
       'Você se deita na cama macia.\nO cansaço da batalha o vence e\nvocê adormece profundamente...\n---\n...',
       () => {
-        // Terremoto sacode o castelo
+        // Terremoto sacode o quarto do castelo por 45 frames antes de abrir a vinheta
         this.quakeTimer = 45;
         soundManager.playSfx('hit');
 
-        // Abre a VignetteScene com a arte do terremoto
-        const vignette = new VignetteScene(
-          this.sceneManager,
-          this.input,
-          'terremoto_passo',
-          'O Passo Desaba',
-          [
-            'Durante a calada da noite,\no solo estremece com extrema\nviolência!',
-            'Um estrondo ensurdecedor ecoa\npelas montanhas a leste do reino...\nPedras rolam pelo vale!',
-            'A grande muralha rochosa do\ndesfiladeiro racha e desmorona\nnuma imensa nuvem de poeira!',
-            'Uma fresta ampla se abre entre\nas rochas caídas, revelando o\ncaminho do Passo do Santuário!',
-          ],
-          () => {
-            this.sceneManager.pop();
+        this.onQuakeFinishedCallback = () => {
+          // Abre a VignetteScene com a arte do terremoto (uma única vez)
+          const vignette = new VignetteScene(
+            this.sceneManager,
+            this.input,
+            'terremoto_passo',
+            'O Passo Desaba',
+            [
+              'Durante a calada da noite,\no solo estremece com\nextrema violência!',
+              'Um estrondo ecoa pelas\nmontanhas a leste do reino.\nPedras rolam pelo vale!',
+              'A grande muralha rochosa\ndo desfiladeiro racha e\ndesaba em densa poeira!',
+              'Uma fresta ampla se abre\nentre as rochas, revelando\no Passo do Santuário!',
+            ],
+            () => {
+              this.sceneManager.pop();
 
-            // Retorna ao quarto pela manhã
-            gameState.setFlag('terremoto_visto', true);
-            gameState.setFlag('passo_desabado', true);
-            gameState.setFlag('rei_aguarda_pos_terremoto', true);
-            soundManager.playSfx('stairs');
+              // Retorna ao quarto pela manhã
+              gameState.setFlag('terremoto_visto', true);
+              gameState.setFlag('passo_desabado', true);
+              gameState.setFlag('rei_aguarda_pos_terremoto', true);
+              soundManager.playSfx('stairs');
 
-            // Capitã Marta acorda o herói com a notícia urgente
-            this.dialogueBox.start(
-              'CAPITÃ MARTA',
-              'Herói, acorde! Você sentiu esse\ntremor estarrecedor?!\n---\nAs sentinelas relataram que o\ndesfiladeiro do leste desabou\ndurante a noite!\n---\nO Rei Auren o convoca com a\nmáxima urgência ao Salão do Trono!',
-              () => {
-                gameState.saveGame(
-                  this.currentMapId,
-                  this.player.tileX,
-                  this.player.tileY,
-                  this.player.direction
-                );
-              }
-            );
-          }
-        );
-        this.sceneManager.push(vignette);
+              // Capitã Marta acorda o herói com a notícia urgente
+              this.dialogueBox.start(
+                'CAPITÃ MARTA',
+                'Herói, acorde! Você sentiu esse\ntremor estarrecedor?!\n---\nAs sentinelas relataram que o\ndesfiladeiro do leste desabou\ndurante a noite!\n---\nO Rei Auren o convoca com a\nmáxima urgência ao Salão do Trono!',
+                () => {
+                  gameState.saveGame(
+                    this.currentMapId,
+                    this.player.tileX,
+                    this.player.tileY,
+                    this.player.direction
+                  );
+                }
+              );
+            }
+          );
+          this.sceneManager.push(vignette);
+        };
       }
     );
   }
@@ -2039,7 +2080,15 @@ export class MapScene implements Scene {
     if (this.quakeTimer > 0) {
       this.quakeTimer--;
       if (this.quakeTimer % 14 === 0) soundManager.playSfx('hit');
-      if (this.quakeTimer === 0) this.finishEarthquake();
+      if (this.quakeTimer === 0) {
+        if (this.onQuakeFinishedCallback) {
+          const cb = this.onQuakeFinishedCallback;
+          this.onQuakeFinishedCallback = null;
+          cb();
+        } else {
+          this.finishEarthquake();
+        }
+      }
       return;
     }
     if (
@@ -2346,7 +2395,7 @@ export class MapScene implements Scene {
     }
   }
 
-  /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e exibe a vinheta cinematográfica. */
+  /** Conclui o terremoto: reabre os tiles originais do Passo do Santuário e da Ponte do Sul e exibe a vinheta cinematográfica. */
   private finishEarthquake(): void {
     if (this.currentMapId === 'overworld') {
       this.currentMap.setTileAt(82, 39, 'path');
@@ -2354,6 +2403,11 @@ export class MapScene implements Scene {
       for (let y = 40; y <= 45; y++) {
         this.currentMap.setTileAt(82, y, 'path');
         this.currentMap.setTileAt(83, y, 'path');
+      }
+      for (let y = 66; y <= 67; y++) {
+        for (let x = 47; x <= 49; x++) {
+          this.currentMap.setTileAt(x, y, 'path');
+        }
       }
     }
     soundManager.playSfx('stairs');

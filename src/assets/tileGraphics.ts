@@ -656,6 +656,7 @@ export const TILE_RAW_DATA: Record<string, { palette: Record<string, string>; ma
 
   throne: {
     palette: {
+      '.': 'transparent',
       'k': NES_COLORS.BLACK,
       'y': NES_COLORS.GOLD,
       'g': NES_COLORS.YELLOW,
@@ -685,7 +686,7 @@ export const TILE_RAW_DATA: Record<string, { palette: Record<string, string>; ma
 
   chest: {
     palette: {
-      '.': NES_COLORS.DARK_GRAY,
+      '.': 'transparent',
       'k': NES_COLORS.BLACK,
       'y': NES_COLORS.GOLD,
       'b': NES_COLORS.DARK_BROWN,
@@ -714,7 +715,7 @@ export const TILE_RAW_DATA: Record<string, { palette: Record<string, string>; ma
 
   chest_open: {
     palette: {
-      '.': NES_COLORS.DARK_GRAY,
+      '.': 'transparent',
       'k': NES_COLORS.BLACK,
       'y': NES_COLORS.GOLD,
       'b': NES_COLORS.DARK_BROWN,

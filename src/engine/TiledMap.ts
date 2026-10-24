@@ -365,10 +365,19 @@ export class TiledMap {
       const nDef = TILE_DEFS_BY_ID[this.grid[ny][nx]];
       if (!nDef || nDef.solid || nDef.kind === 'entrance') continue;
       const nSprite = Array.isArray(nDef.spriteId) ? nDef.spriteId[0] : nDef.spriteId;
-      if (nSprite === 'barrel' || nSprite === 'pot' || nSprite === 'door') continue;
+      if (
+        nSprite === 'barrel' ||
+        nSprite === 'pot' ||
+        nSprite === 'throne' ||
+        nSprite === 'chest' ||
+        nSprite === 'chest_open' ||
+        nSprite === 'door'
+      ) {
+        continue;
+      }
       return nSprite;
     }
-    return 'wood_floor';
+    return 'castle_floor';
   }
 
   public render(renderer: Renderer, camera: Camera, assetManager: AssetManager): void {
@@ -392,8 +401,14 @@ export class TiledMap {
         const sprite = assetManager.getTile(spriteId);
         const screenPos = camera.toScreen(tx * this.tileSize, ty * this.tileSize);
 
-        // Objetos com fundo transparente (barril, vaso) recebem o piso vizinho por baixo
-        if (spriteId === 'barrel' || spriteId === 'pot') {
+        // Objetos com fundo transparente (cadeira/trono, baú, barril, vaso) recebem o piso vizinho por baixo
+        if (
+          spriteId === 'barrel' ||
+          spriteId === 'pot' ||
+          spriteId === 'throne' ||
+          spriteId === 'chest' ||
+          spriteId === 'chest_open'
+        ) {
           renderer.drawSprite(
             assetManager.getTile(this.findUnderlaySprite(tx, ty)),
             screenPos.x,
